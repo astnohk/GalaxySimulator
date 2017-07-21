@@ -15,6 +15,9 @@ initSystem()
 	GalaxySimulatorWindow.style.left = "0px";
 	GalaxySimulatorWindow.style.width = "100%";
 	GalaxySimulatorWindow.style.height = "100%";
+	GalaxySimulatorWindow.style.padding = "0";
+	GalaxySimulatorWindow.style.outline = "0";
+	GalaxySimulatorWindow.style.border = "0";
 	document.body.appendChild(GalaxySimulatorWindow);
 
 	GalaxySimulatorApplication = new GalaxySimulator(SystemRoot, GalaxySimulatorWindow);
