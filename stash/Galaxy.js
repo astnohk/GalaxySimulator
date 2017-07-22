@@ -27,7 +27,7 @@ class GalaxySimulator {
 		this.G = 6.67259e-11;
 
 		this.m_BH = 1.0e14;
-		this.BHNum = 3;
+		this.BHNum = 7;
 		this.BH = new Array(this.BHNum);
 		this.BH_postmp = new Array(this.BHNum);
 
@@ -56,7 +56,7 @@ class GalaxySimulator {
 	{
 		// Make colormap
 		this.makeColormap();
-		this.colormap.current = this.colormap.bluesea;
+		this.colormap.current = this.colormap.normal;
 		// Initialize canvas
 		this.prepareCanvas();
 		// Set event listener
@@ -273,17 +273,19 @@ class GalaxySimulator {
 
 	makeColormap()
 	{
-		let dc = Math.ceil(255 / (this.colormapQuantize / 2));
+		let dc = 255 / (this.colormapQuantize / 2);
+		console.log(dc);
 		// Make colormap normal
 		for (let i = 0; i <= Math.floor(this.colormapQuantize / 2); i++) {
-			this.colormap.normal[i] = 'rgb(0,' + Math.min(255, dc * i) + ',' + Math.max(0, 255 - dc * i) + ')';
+			this.colormap.normal[i] = 'rgb(0,' + Math.min(255, Math.ceil(dc * i)) + ',' + Math.max(0, 255 - Math.ceil(dc * i)) + ')';
 		}
 		for (let i = Math.floor(this.colormapQuantize / 2); i < this.colormapQuantize; i++) {
-			this.colormap.normal[i] = 'rgb(' + Math.min(255, dc * i) + ',' + Math.max(0, 255 - dc * i) + ',0)';
+			this.colormap.normal[i] = 'rgb(' + Math.min(255, Math.ceil(dc * (i - this.colormapQuantize / 2))) + ',' + Math.max(0, 255 - Math.ceil(dc * (i - this.colormapQuantize / 2))) + ',0)';
 		}
 		// Make colormap bluesea
+		dc = 255 / this.colormapQuantize;
 		for (let i = 0; i < this.colormapQuantize; i++) {
-			this.colormap.bluesea[i] = 'rgb(0,' + Math.min(255, dc * i) + ',255)';
+			this.colormap.bluesea[i] = 'rgb(' + Math.min(255, Math.ceil(dc / 2 * i)) + ',' + Math.min(255, Math.ceil(dc * i)) + ',255)';
 		}
 	}
 
@@ -308,7 +310,7 @@ class GalaxySimulator {
 			    this.scale,
 			    this.viewOffset,
 			    this.fieldXYZ);
-			this.context.strokeStyle = this.colormap.current[(this.particle[n].id * 61) % this.colormapQuantize];
+			this.context.strokeStyle = this.colormap.current[(this.particle[n].id * 29) % this.colormapQuantize];
 			this.context.beginPath();
 			this.context.arc(xy.x, xy.y, 0.5, 0, 2 * Math.PI, false);
 			this.context.stroke();
