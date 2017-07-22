@@ -10,7 +10,7 @@ class GalaxySimulator {
 		this.rootWindowStyle = window.getComputedStyle(this.rootWindow);
 		this.loopEnded = true;
 
-		this.collapseButton = null;
+		this.startstopButton = null;
 
 		this.timeClock = null;
 
@@ -62,18 +62,17 @@ class GalaxySimulator {
 		// Set event listener
 		this.rootWindow.addEventListener("keydown", function (e) { e.currentTarget.rootInstance.keyDown(e); }, false);
 		this.rootWindow.addEventListener("wheel", function (e) { e.currentTarget.rootInstance.wheelMove(e); }, false);
-		this.collapseButton = document.createElement("div");
-		this.collapseButton.rootInstance = this;
-		this.collapseButton.innerHTML = "collapse";
-		this.collapseButton.id = "WaveSimulatorCollapseButton";
-		this.collapseButton.addEventListener("mousedown", function (e) { e.preventDefault(); e.currentTarget.rootInstance.collapseBoat(e); }, false);
-		this.collapseButton.addEventListener("touchstart", function (e) { e.preventDefault(); e.currentTarget.rootInstance.collapseBoat(e); }, false);
-		this.rootWindow.appendChild(this.collapseButton);
+		this.startstopButton = document.createElement("div");
+		this.startstopButton.rootInstance = this;
+		this.startstopButton.innerHTML = "startstop";
+		this.startstopButton.id = "GalaxySimulatorStartStopButton";
+		this.startstopButton.addEventListener("mousedown", function (e) { e.preventDefault(); e.currentTarget.rootInstance.startstop(e); }, false);
+		this.startstopButton.addEventListener("touchstart", function (e) { e.preventDefault(); e.currentTarget.rootInstance.startstop(e); }, false);
+		this.rootWindow.appendChild(this.startstopButton);
 
 		// Adjust initial view rotation
 		this.rotXYZ(this.fieldXYZ, 0, Math.PI * 120.0 / 180.0);
 		// Set root for setInterval
-		let root = this;
 
 		// Set view offset
 		this.viewOffset.x = 0;
@@ -87,6 +86,12 @@ class GalaxySimulator {
 		this.initGalaxy();
 
 		// Start loop
+		this.startLoop();
+	}
+
+	startLoop()
+	{
+		let root = this;
 		this.timeClock = setInterval(function () { root.loop(); }, 25);
 	}
 
@@ -95,7 +100,7 @@ class GalaxySimulator {
 		// Initialize canvas
 		this.canvas = document.createElement("canvas");
 		this.canvas.rootInstance = this;
-		this.canvas.id = "WaveSimulatorMainPool";
+		this.canvas.id = "GalaxySimulatorMainPool";
 		this.canvas.style.width = "100%";
 		this.canvas.style.height = "100%";
 		this.rootWindow.appendChild(this.canvas);
@@ -631,6 +636,16 @@ class GalaxySimulator {
 	{
 		event.preventDefault();
 		this.scale = Math.exp(Math.log(this.scale) - event.deltaY * 0.001);
+	}
+
+	startstop()
+	{
+		if (this.timeClock) {
+			clearInterval(this.timeClock);
+			this.timeClock = null;
+		} else {
+			this.startLoop();
+		}
 	}
 }
 

@@ -1,4 +1,4 @@
-#WaveSimulatorReadme {
+#GalaxySimulatorReadme {
 	position: absolute;
 	top: 10px;
 	left: 50%;
@@ -13,7 +13,7 @@
 	outline-color: rgb(255, 0, 0);
 }
 
-#WaveSimulatorMenu {
+#GalaxySimulatorMenu {
 	position: absolute;
 	top: 70px;
 	left: 80px;
@@ -21,13 +21,13 @@
 	background-color: rgba(0, 0, 0, 0.3);
 }
 
-#WaveSimulatorMainPool {
+#GalaxySimulatorMainPool {
 	position: absolute;
 	top: 0px;
 	left: 0px;
 }
 
-#WaveSimulatorCollapseButton {
+#GalaxySimulatorStartStopButton {
 	position: absolute;
 	top: 0;
 	right: 0;
