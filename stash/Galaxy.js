@@ -135,11 +135,13 @@ class GalaxySimulator {
 				position: {
 					x: this.cosmoSize * (Math.random() - 0.5),
 					y: this.cosmoSize * (Math.random() - 0.5),
-					z: this.cosmoSize * (Math.random() - 0.5)},
+					z: this.cosmoSize * (Math.random() - 0.5)
+				},
 				velocity: {
 					x: velInitMaxBH * (Math.random() - 0.5),
 					y: velInitMaxBH * (Math.random() - 0.5),
-					z: velInitMaxBH * (Math.random() - 0.5)}
+					z: velInitMaxBH * (Math.random() - 0.5)
+				}
 			    };
 			this.BH_postmp[N] = {x: 0.0, y: 0.0, z: 0.0};
 			torque[N] = {X: {x: 1.0, y: 0.0, z: 0.0}, Y: {x: 0.0, y: 1.0, z: 0.0}, Z: {x: 0.0, y: 0.0, z: 1.0}};
@@ -175,11 +177,14 @@ class GalaxySimulator {
 				position: {
 					x: p.x + r.x,
 					y: p.y + r.y,
-					z: p.z + r.z},
+					z: p.z + r.z
+				},
 				velocity: {
 					x: vel * v_norm.x + this.BH[N].velocity.x,
 					y: vel * v_norm.y + this.BH[N].velocity.y,
-					z: vel * v_norm.z + this.BH[N].velocity.z}
+					z: vel * v_norm.z + this.BH[N].velocity.z
+				},
+				id: N
 			    };
 			this.particle_postmp[n] = {x: 0.0, y: 0.0, z: 0.0};
 		}
@@ -296,10 +301,6 @@ class GalaxySimulator {
 		let vel;
 		this.context.strokeStyle = 'blue';
 		for (let n = 0; n < this.particleNum; n++) {
-			vel = 100 * Math.sqrt(
-			    this.particle[n].velocity.x * this.particle[n].velocity.x +
-			    this.particle[n].velocity.y * this.particle[n].velocity.y +
-			    this.particle[n].velocity.z * this.particle[n].velocity.z);
 			xy = this.calcView(
 			    this.particle[n].position.x,
 			    this.particle[n].position.y,
@@ -307,9 +308,9 @@ class GalaxySimulator {
 			    this.scale,
 			    this.viewOffset,
 			    this.fieldXYZ);
-			this.context.strokeStyle = this.colormap.current[Math.min(this.colormapQuantize, vel)];
+			this.context.strokeStyle = this.colormap.current[(this.particle[n].id * 61) % this.colormapQuantize];
 			this.context.beginPath();
-			this.context.arc(xy.x, xy.y, 1, 0, 2 * Math.PI, false);
+			this.context.arc(xy.x, xy.y, 0.5, 0, 2 * Math.PI, false);
 			this.context.stroke();
 		}
 	}
