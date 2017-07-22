@@ -16,22 +16,27 @@ class GalaxySimulator {
 
 		this.canvas = null;
 		this.context = null;
+		this.scale = 0.5;
 
-		this.cosmoSize = 500;
+
+		this.cosmoSize = 800;
+		this.galaxySize = 200;
+		this.galaxyCenterRadius = 75;
 		this.r_min = 0.1;
 		this.dt = 0.1;
 		this.G = 6.67259e-11;
-		this.particleNum = 1000;
-		this.particle = new Array(this.particleNum);
-		this.particle_tmp = new Array(this.particleNum);
-		this.velocity = new Array(this.particleNum);
-		this.m_BH = 1e14;
+
+		this.m_BH = 1.0e14;
 		this.BHNum = 3;
 		this.BH = new Array(this.BHNum);
-		this.BH_tmp = new Array(this.BHNum);
-		this.velocity_BH = new Array(this.BHNum);
+		this.BH_postmp = new Array(this.BHNum);
 
-		this.scale = 1.0;
+		this.m = 1.0;
+		this.particleNum = 3000;
+		this.particle = new Array(this.particleNum);
+		this.particle_postmp = new Array(this.particleNum);
+
+
 		this.fieldXYZ = {X: {x: 1.0, y: 0.0, z: 0.0}, Y: {x: 0.0, y: 1.0, z: 0.0}, Z: {x: 0.0, y: 0.0, z: 1.0}};
 		this.viewOffset = {x: 0, y: 0, z: 0};
 		this.displayOffset = {x: 0, y: 0, z: 0};
@@ -52,21 +57,11 @@ class GalaxySimulator {
 		// Make colormap
 		this.makeColormap();
 		this.colormap.current = this.colormap.bluesea;
-		// Initialize brane
-		for (let n = 0; n < this.particleNum; n++) {
-			this.particle[n] = {x: 0.0, y: 0.0, z: 0.0};
-			this.particle_tmp[n] = {x: 0.0, y: 0.0, z: 0.0};
-			this.velocity[n] = {x: 0.0, y: 0.0, z: 0.0};
-		}
-		for (let N = 0; N < this.BHNum; N++) {
-			this.BH[N] = {x: 0.0, y: 0.0, z: 0.0};
-			this.BH_tmp[N] = {x: 0.0, y: 0.0, z: 0.0};
-			this.velocity_BH[N] = {x: 0.0, y: 0.0, z: 0.0};
-		}
 		// Initialize canvas
 		this.prepareCanvas();
 		// Set event listener
 		this.rootWindow.addEventListener("keydown", function (e) { e.currentTarget.rootInstance.keyDown(e); }, false);
+		this.rootWindow.addEventListener("wheel", function (e) { e.currentTarget.rootInstance.wheelMove(e); }, false);
 		this.collapseButton = document.createElement("div");
 		this.collapseButton.rootInstance = this;
 		this.collapseButton.innerHTML = "collapse";
@@ -83,33 +78,13 @@ class GalaxySimulator {
 		// Set view offset
 		this.viewOffset.x = 0;
 		this.viewOffset.y = 0;
+		this.viewOffset.z = 0;
 		// Set display offset
 		this.displayOffset.x = this.canvas.width / 2.0;
 		this.displayOffset.y = this.canvas.height / 2.0;
 
 		// Set initial position and velocity
-		let velInitMax = 8;
-		let velInitMaxBH = 12;
-		for (let n = 0; n < this.particleNum; n++) {
-			this.particle[n] = {
-			    x: this.cosmoSize * (Math.random() - 0.5),
-			    y: this.cosmoSize * (Math.random() - 0.5),
-			    z: this.cosmoSize * (Math.random() - 0.5)};
-			this.velocity[n] = {
-			    x: velInitMax * (Math.random() - 0.5),
-			    y: velInitMax * (Math.random() - 0.5),
-			    z: velInitMax * (Math.random() - 0.5)};
-		}
-		for (let N = 0; N < this.BHNum; N++) {
-			this.BH[N] = {
-			    x: this.cosmoSize * (Math.random() - 0.5),
-			    y: this.cosmoSize * (Math.random() - 0.5),
-			    z: this.cosmoSize * (Math.random() - 0.5)};
-			this.velocity_BH[N] = {
-			    x: velInitMaxBH * (Math.random() - 0.5),
-			    y: velInitMaxBH * (Math.random() - 0.5),
-			    z: velInitMaxBH * (Math.random() - 0.5)};
-		}
+		this.initGalaxy();
 
 		// Start loop
 		this.timeClock = setInterval(function () { root.loop(); }, 25);
@@ -146,6 +121,66 @@ class GalaxySimulator {
 		this.canvas.height = parseInt(canvasStyle.height, 10);
 	}
 
+	initGalaxy() {
+		let velInitMax = 8;
+		let velInitMaxBH = 12;
+		let torque = new Array(3);
+		for (let N = 0; N < this.BHNum; N++) {
+			this.BH[N] = {
+				position: {
+					x: this.cosmoSize * (Math.random() - 0.5),
+					y: this.cosmoSize * (Math.random() - 0.5),
+					z: this.cosmoSize * (Math.random() - 0.5)},
+				velocity: {
+					x: velInitMaxBH * (Math.random() - 0.5),
+					y: velInitMaxBH * (Math.random() - 0.5),
+					z: velInitMaxBH * (Math.random() - 0.5)}
+			    };
+			this.BH_postmp[N] = {x: 0.0, y: 0.0, z: 0.0};
+			torque[N] = {X: {x: 1.0, y: 0.0, z: 0.0}, Y: {x: 0.0, y: 1.0, z: 0.0}, Z: {x: 0.0, y: 0.0, z: 1.0}};
+			this.rotXYZ(
+			    torque[N],
+			    2 * Math.PI * Math.random(),
+			    2 * Math.PI * Math.random());
+		}
+		for (let n = 0; n < this.particleNum; n++) {
+			let N = n % this.BHNum;
+			let p = this.BH[N].position;
+			let r_pre = {
+				x: this.galaxySize * (Math.random() - 0.5),
+				y: this.galaxySize * (Math.random() - 0.5),
+				z: 0};
+			let r_xy = Math.sqrt(r_pre.x * r_pre.x + r_pre.y * r_pre.y);
+			if (r_xy > this.galaxyCenterRadius) {
+				r_pre.z = 0.0625 * this.galaxySize * (Math.random() - 0.5);
+			} else {
+				r_pre.z = Math.cos(Math.PI / 2 * r_xy / this.galaxyCenterRadius) * this.galaxyCenterRadius * (Math.random() - 0.5);
+			}
+			let r = {
+				x: torque[N].X.x * r_pre.x + torque[N].Y.x * r_pre.y + torque[N].Z.x * r_pre.z,
+				y: torque[N].X.y * r_pre.x + torque[N].Y.y * r_pre.y + torque[N].Z.y * r_pre.z,
+				z: torque[N].X.z * r_pre.x + torque[N].Y.z * r_pre.y + torque[N].Z.z * r_pre.z};
+			let v_norm = this.normalizeVect(this.crossProduct(torque[N].Z, r));
+			let r_abs = Math.sqrt(r.x * r.x + r.y * r.y + r.z * r.z);
+			// r w^2 = G M / r^2
+			// v^2 = G M / r where v = r w
+			// v = sqrt(G M / r)
+			let vel = Math.sqrt(this.G * this.m_BH / r_abs);
+			this.particle[n] = {
+				position: {
+					x: p.x + r.x,
+					y: p.y + r.y,
+					z: p.z + r.z},
+				velocity: {
+					x: vel * v_norm.x + this.BH[N].velocity.x,
+					y: vel * v_norm.y + this.BH[N].velocity.y,
+					z: vel * v_norm.z + this.BH[N].velocity.z}
+			    };
+			this.particle_postmp[n] = {x: 0.0, y: 0.0, z: 0.0};
+		}
+	}
+
+
 	// ----- Start Simulation -----
 	loop()
 	{
@@ -176,9 +211,9 @@ class GalaxySimulator {
 		for (let n = 0; n < this.particleNum; n++) {
 			let f = {x: 0, y: 0, z: 0};
 			for (let N = 0; N < this.BHNum; N++) {
-				let x = this.BH[N].x - this.particle[n].x;
-				let y = this.BH[N].y - this.particle[n].y;
-				let z = this.BH[N].z - this.particle[n].z;
+				let x = this.BH[N].position.x - this.particle[n].position.x;
+				let y = this.BH[N].position.y - this.particle[n].position.y;
+				let z = this.BH[N].position.z - this.particle[n].position.z;
 				let r = Math.max(this.r_min, x * x + y * y + z * z);
 				f.x += x / Math.pow(r, 1.5);
 				f.y += y / Math.pow(r, 1.5);
@@ -187,15 +222,15 @@ class GalaxySimulator {
 			f.x *= this.G * this.m_BH;
 			f.y *= this.G * this.m_BH;
 			f.z *= this.G * this.m_BH;
-			this.velocity[n].x += f.x * this.dt;
-			this.velocity[n].y += f.y * this.dt;
-			this.velocity[n].z += f.z * this.dt;
-			this.particle_tmp[n].x = this.particle[n].x + this.velocity[n].x * this.dt;
-			this.particle_tmp[n].y = this.particle[n].y + this.velocity[n].y * this.dt;
-			this.particle_tmp[n].z = this.particle[n].z + this.velocity[n].z * this.dt;
+			this.particle[n].velocity.x += f.x * this.dt;
+			this.particle[n].velocity.y += f.y * this.dt;
+			this.particle[n].velocity.z += f.z * this.dt;
+			this.particle_postmp[n].x = this.particle[n].position.x + this.particle[n].velocity.x * this.dt;
+			this.particle_postmp[n].y = this.particle[n].position.y + this.particle[n].velocity.y * this.dt;
+			this.particle_postmp[n].z = this.particle[n].position.z + this.particle[n].velocity.z * this.dt;
 		}
 		for (let n = 0; n < this.particleNum; n++) {
-			this.particle[n] = this.particle_tmp[n];
+			this.particle[n].position = this.particle_postmp[n];
 		}
 		for (let N = 0; N < this.BHNum; N++) {
 			let f = {x: 0, y: 0, z: 0};
@@ -203,9 +238,9 @@ class GalaxySimulator {
 				if (N == N_o) {
 					continue;
 				}
-				let x = this.BH[N_o].x - this.BH[N].x;
-				let y = this.BH[N_o].y - this.BH[N].y;
-				let z = this.BH[N_o].z - this.BH[N].z;
+				let x = this.BH[N_o].position.x - this.BH[N].position.x;
+				let y = this.BH[N_o].position.y - this.BH[N].position.y;
+				let z = this.BH[N_o].position.z - this.BH[N].position.z;
 				let r = Math.max(this.r_min, x * x + y * y + z * z);
 				f.x += x / Math.pow(r, 1.5);
 				f.y += y / Math.pow(r, 1.5);
@@ -214,15 +249,15 @@ class GalaxySimulator {
 			f.x *= this.G * this.m_BH;
 			f.y *= this.G * this.m_BH;
 			f.z *= this.G * this.m_BH;
-			this.velocity_BH[N].x += f.x * this.dt;
-			this.velocity_BH[N].y += f.y * this.dt;
-			this.velocity_BH[N].z += f.z * this.dt;
-			this.BH_tmp[N].x = this.BH[N].x + this.velocity_BH[N].x * this.dt;
-			this.BH_tmp[N].y = this.BH[N].y + this.velocity_BH[N].y * this.dt;
-			this.BH_tmp[N].z = this.BH[N].z + this.velocity_BH[N].z * this.dt;
+			this.BH[N].velocity.x += f.x * this.dt;
+			this.BH[N].velocity.y += f.y * this.dt;
+			this.BH[N].velocity.z += f.z * this.dt;
+			this.BH_postmp[N].x = this.BH[N].position.x + this.BH[N].velocity.x * this.dt;
+			this.BH_postmp[N].y = this.BH[N].position.y + this.BH[N].velocity.y * this.dt;
+			this.BH_postmp[N].z = this.BH[N].position.z + this.BH[N].velocity.z * this.dt;
 		}
 		for (let N = 0; N < this.BHNum; N++) {
-			this.BH[N] = this.BH_tmp[N];
+			this.BH[N].position = this.BH_postmp[N];
 		}
 	}
 
@@ -257,13 +292,13 @@ class GalaxySimulator {
 		this.context.strokeStyle = 'blue';
 		for (let n = 0; n < this.particleNum; n++) {
 			vel = 100 * Math.sqrt(
-			    this.velocity[n].x * this.velocity[n].x +
-			    this.velocity[n].y * this.velocity[n].y +
-			    this.velocity[n].z * this.velocity[n].z);
+			    this.particle[n].velocity.x * this.particle[n].velocity.x +
+			    this.particle[n].velocity.y * this.particle[n].velocity.y +
+			    this.particle[n].velocity.z * this.particle[n].velocity.z);
 			xy = this.calcView(
-			    this.particle[n].x,
-			    this.particle[n].y,
-			    this.particle[n].z,
+			    this.particle[n].position.x,
+			    this.particle[n].position.y,
+			    this.particle[n].position.z,
 			    this.scale,
 			    this.viewOffset,
 			    this.fieldXYZ);
@@ -281,13 +316,13 @@ class GalaxySimulator {
 		this.context.strokeStyle = 'blue';
 		for (let N = 0; N < this.BHNum; N++) {
 			vel = 100 * Math.sqrt(
-			    this.velocity_BH[N].x * this.velocity_BH[N].x +
-			    this.velocity_BH[N].y * this.velocity_BH[N].y +
-			    this.velocity_BH[N].z * this.velocity_BH[N].z);
+			    this.BH[N].velocity.x * this.BH[N].velocity.x +
+			    this.BH[N].velocity.y * this.BH[N].velocity.y +
+			    this.BH[N].velocity.z * this.BH[N].velocity.z);
 			xy = this.calcView(
-			    this.BH[N].x,
-			    this.BH[N].y,
-			    this.BH[N].z,
+			    this.BH[N].position.x,
+			    this.BH[N].position.y,
+			    this.BH[N].position.z,
 			    this.scale,
 			    this.viewOffset,
 			    this.fieldXYZ);
@@ -349,7 +384,7 @@ class GalaxySimulator {
 		vector.x = a.y * b.z - a.z * b.y;
 		vector.y = a.z * b.x - a.x * b.z;
 		vector.z = a.x * b.y - a.y * b.x;
-		let norm = this.normXYZ(vector);
+		let norm = this.normVect(vector);
 		if (norm > 0.01) {
 			vector.x /= norm;
 			vector.y /= norm;
@@ -377,7 +412,7 @@ class GalaxySimulator {
 		return xy;
 	}
 
-	normXYZ(xyz)
+	normVect(xyz)
 	{
 		return Math.sqrt(xyz.x * xyz.x + xyz.y * xyz.y + xyz.z * xyz.z);
 	}
@@ -387,36 +422,47 @@ class GalaxySimulator {
 		return A.x * B.x + A.y * B.y + A.z * B.z;
 	}
 
-	normalizeXYZ(XYZ)
+	normalizeVect(xyz)
 	{
-		let norm = this.normXYZ(XYZ);
+		let norm = this.normVect(xyz);
 		if (norm > 0.1) {
-			XYZ.x /= norm;
-			XYZ.y /= norm;
-			XYZ.z /= norm;
+			xyz.x /= norm;
+			xyz.y /= norm;
+			xyz.z /= norm;
 		}
-		return XYZ;
+		return xyz;
+	}
+	
+	crossProduct(X, Y)
+	{
+		let Z = {x: 0, y: 0, z: 0};
+		Z.x = X.y * Y.z - X.z * Y.y;
+		Z.y = X.z * Y.x - X.x * Y.z;
+		Z.z = X.x * Y.y - X.y * Y.x;
+		return Z;
 	}
 
-	rotate(XYZ, x, y)
+	rotate(xyz, x, y)
 	{
 		let ret = {x: 0, y: 0, z: 0};
-		ret.x = XYZ.x * Math.cos(x) - XYZ.z * Math.sin(x);
-		ret.z = XYZ.z * Math.cos(x) + XYZ.x * Math.sin(x);
-		ret.y = XYZ.y * Math.cos(y) - ret.z * Math.sin(y);
-		ret.z = ret.z * Math.cos(y) + XYZ.y * Math.sin(y);
+		ret.x = xyz.x * Math.cos(x) - xyz.z * Math.sin(x);
+		ret.z = xyz.z * Math.cos(x) + xyz.x * Math.sin(x);
+		ret.y = xyz.y * Math.cos(y) - ret.z * Math.sin(y);
+		ret.z = ret.z * Math.cos(y) + xyz.y * Math.sin(y);
 		return ret;
 	}
 
+	// rotate normalized dimension vectors and output rotated vectors with normalizing
+	// note: this function do not return any value and modify the first argument;
 	rotXYZ(XYZ, x, y)
 	{
 		XYZ.X = this.rotate(XYZ.X, x, y);
 		XYZ.Y = this.rotate(XYZ.Y, x, y);
 		XYZ.Z = this.rotate(XYZ.Z, x, y);
 		// Normalize
-		XYZ.X = this.normalizeXYZ(XYZ.X);
-		XYZ.Y = this.normalizeXYZ(XYZ.Y);
-		XYZ.Z = this.normalizeXYZ(XYZ.Z);
+		XYZ.X = this.normalizeVect(XYZ.X);
+		XYZ.Y = this.normalizeVect(XYZ.Y);
+		XYZ.Z = this.normalizeVect(XYZ.Z);
 		// Reduce residue of Y
 		let a = this.innerProductXYZ(XYZ.X, XYZ.Y);
 		XYZ.Y.x -= a * XYZ.X.x;
@@ -433,6 +479,8 @@ class GalaxySimulator {
 		XYZ.Z.z -= a * XYZ.Y.z;
 	}
 
+	// rotate normalized dimension vectors as Z axis moment and output rotated vectors with normalizing
+	// note: this function do not return any value and modify the first argument;
 	rotXYZOnZ(XYZ, yaw, y)
 	{
 		let X = {x: 0, y: 0, z: 0};
@@ -457,7 +505,7 @@ class GalaxySimulator {
 			XYZ.Y.z = Y.z * cos + X.z * sin;
 		}
 		// normalize
-		let norm = this.normXYZ(XYZ.X);
+		let norm = this.normVect(XYZ.X);
 		if (norm > 0.1) {
 			XYZ.X.x /= norm;
 			XYZ.X.y /= norm;
@@ -538,8 +586,8 @@ class GalaxySimulator {
 				    2.0 * Math.PI * (event.clientY - this.prev_clientY) / this.rotDegree);
 			} else if ((event.buttons & 4) != 0) {
 				let move = {x: 0, y: 0}
-				move.x = event.clientX - this.prev_clientX;
-				move.y = event.clientY - this.prev_clientY;
+				move.x = (event.clientX - this.prev_clientX) / this.scale;
+				move.y = (event.clientY - this.prev_clientY) / this.scale;
 				this.viewOffset.x -= move.x * this.fieldXYZ.X.x + move.y * this.fieldXYZ.X.y;
 				this.viewOffset.y -= move.x * this.fieldXYZ.Y.x + move.y * this.fieldXYZ.Y.y;
 				this.viewOffset.z -= move.x * this.fieldXYZ.Z.x + move.y * this.fieldXYZ.Z.y;
@@ -553,8 +601,8 @@ class GalaxySimulator {
 				    2.0 * Math.PI * (event.touches[0].clientY - this.prev_clientY) / this.rotDegree);
 			} else if (event.touches.length == 2) {
 				let move = {x: 0, y: 0}
-				move.x = event.touches[0].clientX - this.prev_clientX;
-				move.y = event.touches[0].clientY - this.prev_clientY;
+				move.x = (event.touches[0].clientX - this.prev_clientX) / this.scale;
+				move.y = (event.touches[0].clientY - this.prev_clientY) / this.scale;
 				this.viewOffset.x -= move.x * this.fieldXYZ.X.x + move.y * this.fieldXYZ.X.y;
 				this.viewOffset.y -= move.x * this.fieldXYZ.Y.x + move.y * this.fieldXYZ.Y.y;
 				this.viewOffset.z -= move.x * this.fieldXYZ.Z.x + move.y * this.fieldXYZ.Z.y;
@@ -577,6 +625,12 @@ class GalaxySimulator {
 			case "ArrowRight":
 				break;
 		}
+	}
+
+	wheelMove(event)
+	{
+		event.preventDefault();
+		this.scale = Math.exp(Math.log(this.scale) - event.deltaY * 0.001);
 	}
 }
 
