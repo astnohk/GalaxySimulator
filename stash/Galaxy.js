@@ -236,8 +236,6 @@ class GalaxySimulator {
 		if (!this.loopEnded) {
 			return;
 		}
-		this.physics();
-		this.draw();
 		if (this.BHNumChangeInvoked) {
 			this.BHNumChangeInvoked = false;
 			this.BHNumChange();
@@ -246,6 +244,8 @@ class GalaxySimulator {
 			this.particleNumChangeInvoked = false;
 			this.particleNumChange();
 		}
+		this.physics();
+		this.draw();
 		this.loopEnded = true;
 	}
 
