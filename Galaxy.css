@@ -40,3 +40,52 @@
 	cursor: pointer;
 }
 
+#GalaxySimulatorParticleNumChanger {
+	top: 28px;
+	color: rgb(250, 250, 250);
+	background-color: rgba(0, 0, 0, 0.7);
+	font-size: 18px;
+}
+
+#GalaxySimulatorParticleNumChangerLabel {
+	top: 28px;
+	color: rgb(250, 250, 250);
+	background-color: rgba(0, 0, 0, 0.7);
+	font-size: 15px;
+}
+
+#GalaxySimulatorBHNumChanger {
+	top: 55px;
+	color: rgb(250, 250, 250);
+	background-color: rgba(0, 0, 0, 0.7);
+	font-size: 18px;
+}
+
+#GalaxySimulatorBHNumChangerLabel {
+	top: 55px;
+	color: rgb(250, 250, 250);
+	background-color: rgba(0, 0, 0, 0.7);
+	font-size: 15px;
+}
+
+.GalaxySimulatorInput {
+	position: absolute;
+	right: 0;
+	width: 80px;
+	margin: 4px;
+	padding: 4px;
+	outline-style: solid;
+	outline-color: rgba(160, 160, 0, 0.7);
+	outline-width: 1px;
+}
+
+.GalaxySimulatorInputLabel {
+	position: absolute;
+	right: 90px;
+	margin: 4px;
+	padding: 4px;
+	outline-style: solid;
+	outline-color: rgba(160, 160, 0, 0.7);
+	outline-width: 1px;
+}
+

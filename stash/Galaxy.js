@@ -11,6 +11,10 @@ class GalaxySimulator {
 		this.loopEnded = true;
 
 		this.startstopButton = null;
+		this.particleNumChanger = null;
+		this.BHNumChanger = null;
+		this.BHNumChangeInvoked = false;
+		this.particleNumChangeInvoked = false;
 
 		this.timeClock = null;
 
@@ -62,13 +66,8 @@ class GalaxySimulator {
 		// Set event listener
 		this.rootWindow.addEventListener("keydown", function (e) { e.currentTarget.rootInstance.keyDown(e); }, false);
 		this.rootWindow.addEventListener("wheel", function (e) { e.currentTarget.rootInstance.wheelMove(e); }, false);
-		this.startstopButton = document.createElement("div");
-		this.startstopButton.rootInstance = this;
-		this.startstopButton.innerHTML = "startstop";
-		this.startstopButton.id = "GalaxySimulatorStartStopButton";
-		this.startstopButton.addEventListener("mousedown", function (e) { e.preventDefault(); e.currentTarget.rootInstance.startstop(e); }, false);
-		this.startstopButton.addEventListener("touchstart", function (e) { e.preventDefault(); e.currentTarget.rootInstance.startstop(e); }, false);
-		this.rootWindow.appendChild(this.startstopButton);
+		// Create UI parts
+		this.prepareTools();
 
 		// Adjust initial view rotation
 		this.rotXYZ(this.fieldXYZ, 0, Math.PI * 120.0 / 180.0);
@@ -111,8 +110,8 @@ class GalaxySimulator {
 			    e.currentTarget.width = parseInt(style.width, 10);
 			    e.currentTarget.height = parseInt(style.height, 10);
 			    let root = e.currentTarget.rootInstance;
-			    root.displayOffset.x = e.currentTarget.width / 2.0
-			    root.displayOffset.y = e.currentTarget.height / 2.0
+			    root.displayOffset.x = e.currentTarget.width / 2.0;
+			    root.displayOffset.y = e.currentTarget.height / 2.0;
 		    },
 		    false);
 		this.canvas.addEventListener("mousedown", function (e) { e.currentTarget.rootInstance.mouseClick(e); }, false);
@@ -126,8 +125,48 @@ class GalaxySimulator {
 		this.canvas.height = parseInt(canvasStyle.height, 10);
 	}
 
+	prepareTools()
+	{
+		this.startstopButton = document.createElement("div");
+		this.startstopButton.rootInstance = this;
+		this.startstopButton.innerHTML = "startstop";
+		this.startstopButton.id = "GalaxySimulatorStartStopButton";
+		this.startstopButton.addEventListener("mousedown", function (e) { e.preventDefault(); e.currentTarget.rootInstance.startstop(e); }, false);
+		this.startstopButton.addEventListener("touchstart", function (e) { e.preventDefault(); e.currentTarget.rootInstance.startstop(e); }, false);
+		this.rootWindow.appendChild(this.startstopButton);
+
+		var particleNumChangerLabel = document.createElement("div");
+		particleNumChangerLabel.innerHTML = "particle";
+		particleNumChangerLabel.id = "GalaxySimulatorParticleNumChangerLabel";
+		particleNumChangerLabel.className = "GalaxySimulatorInputLabel";
+		this.rootWindow.appendChild(particleNumChangerLabel);
+		this.particleNumChanger = document.createElement("input");
+		this.particleNumChanger.rootInstance = this;
+		this.particleNumChanger.type = "text";
+		this.particleNumChanger.inputmode = "numeric";
+		this.particleNumChanger.value = this.particleNum;
+		this.particleNumChanger.id = "GalaxySimulatorParticleNumChanger";
+		this.particleNumChanger.className = "GalaxySimulatorInput";
+		this.particleNumChanger.addEventListener("change", function (e) { e.preventDefault(); e.currentTarget.rootInstance.particleNumChangeInvoked = true; }, false);
+		this.rootWindow.appendChild(this.particleNumChanger);
+
+		var BHNumChangerLabel = document.createElement("div");
+		BHNumChangerLabel.innerHTML = "black hole";
+		BHNumChangerLabel.id = "GalaxySimulatorBHNumChangerLabel";
+		BHNumChangerLabel.className = "GalaxySimulatorInputLabel";
+		this.rootWindow.appendChild(BHNumChangerLabel);
+		this.BHNumChanger = document.createElement("input");
+		this.BHNumChanger.rootInstance = this;
+		this.BHNumChanger.type = "text";
+		this.BHNumChanger.inputmode = "numeric";
+		this.BHNumChanger.value = this.BHNum;
+		this.BHNumChanger.id = "GalaxySimulatorBHNumChanger";
+		this.BHNumChanger.className = "GalaxySimulatorInput";
+		this.BHNumChanger.addEventListener("change", function (e) { e.preventDefault(); e.currentTarget.rootInstance.BHNumChangeInvoked = true; }, false);
+		this.rootWindow.appendChild(this.BHNumChanger);
+	}
+
 	initGalaxy() {
-		let velInitMax = 8;
 		let velInitMaxBH = 12;
 		let torque = new Array(3);
 		for (let N = 0; N < this.BHNum; N++) {
@@ -199,6 +238,14 @@ class GalaxySimulator {
 		}
 		this.physics();
 		this.draw();
+		if (this.BHNumChangeInvoked) {
+			this.BHNumChangeInvoked = false;
+			this.BHNumChange();
+		}
+		if (this.particleNumChangeInvoked) {
+			this.particleNumChangeInvoked = false;
+			this.particleNumChange();
+		}
 		this.loopEnded = true;
 	}
 
@@ -274,7 +321,6 @@ class GalaxySimulator {
 	makeColormap()
 	{
 		let dc = 255 / (this.colormapQuantize / 2);
-		console.log(dc);
 		// Make colormap normal
 		for (let i = 0; i <= Math.floor(this.colormapQuantize / 2); i++) {
 			this.colormap.normal[i] = 'rgb(0,' + Math.min(255, Math.ceil(dc * i)) + ',' + Math.max(0, 255 - Math.ceil(dc * i)) + ')';
@@ -300,7 +346,6 @@ class GalaxySimulator {
 	drawParticle()
 	{
 		let xy = {x: 0, y: 0};
-		let vel;
 		this.context.strokeStyle = 'blue';
 		for (let n = 0; n < this.particleNum; n++) {
 			xy = this.calcView(
@@ -593,7 +638,7 @@ class GalaxySimulator {
 				    2.0 * Math.PI * (event.clientX - this.prev_clientX) / this.rotDegree,
 				    2.0 * Math.PI * (event.clientY - this.prev_clientY) / this.rotDegree);
 			} else if ((event.buttons & 4) != 0) {
-				let move = {x: 0, y: 0}
+				let move = {x: 0, y: 0};
 				move.x = (event.clientX - this.prev_clientX) / this.scale;
 				move.y = (event.clientY - this.prev_clientY) / this.scale;
 				this.viewOffset.x -= move.x * this.fieldXYZ.X.x + move.y * this.fieldXYZ.X.y;
@@ -608,7 +653,7 @@ class GalaxySimulator {
 				    2.0 * Math.PI * (event.touches[0].clientX - this.prev_clientX) / this.rotDegree,
 				    2.0 * Math.PI * (event.touches[0].clientY - this.prev_clientY) / this.rotDegree);
 			} else if (event.touches.length == 2) {
-				let move = {x: 0, y: 0}
+				let move = {x: 0, y: 0};
 				move.x = (event.touches[0].clientX - this.prev_clientX) / this.scale;
 				move.y = (event.touches[0].clientY - this.prev_clientY) / this.scale;
 				this.viewOffset.x -= move.x * this.fieldXYZ.X.x + move.y * this.fieldXYZ.X.y;
@@ -622,7 +667,6 @@ class GalaxySimulator {
 
 	keyDown(event)
 	{
-		event.preventDefault();
 		switch (event.key) {
 			case "ArrowUp":
 				break;
@@ -648,6 +692,38 @@ class GalaxySimulator {
 			this.timeClock = null;
 		} else {
 			this.startLoop();
+		}
+	}
+
+	BHNumChange()
+	{
+		let val = this.BHNumChanger.value;
+		if (val < 1) {
+			val = 1;
+		}
+		let increase = false;
+		if (val > this.BHNum) {
+			increase = true;
+		}
+		this.BHNum = val;
+		if (increase) {
+			this.initGalaxy();
+		}
+	}
+
+	particleNumChange()
+	{
+		let val = this.particleNumChanger.value;
+		if (val < 1) {
+			val = 1;
+		}
+		let increase = false;
+		if (val > this.particleNum) {
+			increase = true;
+		}
+		this.particleNum = val;
+		if (increase) {
+			this.initGalaxy();
 		}
 	}
 }
