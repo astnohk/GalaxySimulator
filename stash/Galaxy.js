@@ -714,8 +714,8 @@ class GalaxySimulator {
 	particleNumChange()
 	{
 		let val = this.particleNumChanger.value;
-		if (val < 1) {
-			val = 1;
+		if (val < 0) {
+			val = 0;
 		}
 		let increase = false;
 		if (val > this.particleNum) {
