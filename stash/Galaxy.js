@@ -10,6 +10,9 @@ class GalaxySimulator {
 		this.rootWindowStyle = window.getComputedStyle(this.rootWindow);
 		this.loopEnded = true;
 
+		this.touchCounter = 0;
+		this.touchCounting = false;
+
 		this.startstopButton = null;
 		this.particleNumChanger = null;
 		this.BHNumChanger = null;
@@ -270,16 +273,15 @@ class GalaxySimulator {
 
 	automation()
 	{
-		let c = 1.0;
 		if (this.chasingBH >= 0) {
 			let N = this.chasingBH;
 			let d;
 			d = this.BH[N].position.x - this.viewOffset.x;
-			this.viewOffset.x += Math.sign(d) * Math.sqrt(Math.abs(d)) * c;
+			this.viewOffset.x += Math.sign(d) * Math.sqrt(Math.abs(d));
 			d = this.BH[N].position.y - this.viewOffset.y;
-			this.viewOffset.y += Math.sign(d) * Math.sqrt(Math.abs(d)) * c;
+			this.viewOffset.y += Math.sign(d) * Math.sqrt(Math.abs(d));
 			d = this.BH[N].position.z - this.viewOffset.z;
-			this.viewOffset.z += Math.sign(d) * Math.sqrt(Math.abs(d)) * c;
+			this.viewOffset.z += Math.sign(d) * Math.sqrt(Math.abs(d));
 		}
 	}
 
@@ -654,12 +656,20 @@ class GalaxySimulator {
 	mouseClick(event)
 	{
 		event.preventDefault();
+		let root = this;
 		if (event.type === "mousedown") {
 			this.prev_clientX = event.clientX;
 			this.prev_clientY = event.clientY;
 		} else if (event.type === "touchstart") {
 			this.prev_clientX = event.touches[0].clientX;
 			this.prev_clientY = event.touches[0].clientY;
+			if (this.touchCounting) {
+				this.touchDblTap(event);
+			}
+			// Set touchCounting should be at end of event processing
+			this.touchCounting = true;
+			clearTimeout(this.touchCounter);
+			this.touchCounter = setTimeout(function () { console.log("clear"); root.touchCounting = false; }, 200);
 		}
 	}
 
@@ -693,10 +703,6 @@ class GalaxySimulator {
 				this.viewOffset.x -= move.x * this.fieldXYZ.X.x + move.y * this.fieldXYZ.X.y;
 				this.viewOffset.y -= move.x * this.fieldXYZ.Y.x + move.y * this.fieldXYZ.Y.y;
 				this.viewOffset.z -= move.x * this.fieldXYZ.Z.x + move.y * this.fieldXYZ.Z.y;
-			} else if (event.touches.length == 3) {
-				// chase
-				this.chaseBHInvoked = true;
-				this.chaseBHClickedPos = {x: event.touches[0].clientX, y: event.touches[0].clientY};
 			}
 			this.prev_clientX = event.touches[0].clientX;
 			this.prev_clientY = event.touches[0].clientY;
@@ -705,10 +711,15 @@ class GalaxySimulator {
 
 	mouseDblClick(event)
 	{
-		// 3-fingers touch event will process in mouseMove()
 		event.preventDefault();
 		this.chaseBHInvoked = true;
 		this.chaseBHClickedPos = {x: event.clientX, y: event.clientY};
+	}
+
+	touchDblTap(event)
+	{
+		this.chaseBHInvoked = true;
+		this.chaseBHClickedPos = {x: event.touches[0].clientX, y: event.touches[0].clientY};
 	}
 
 	keyDown(event)
