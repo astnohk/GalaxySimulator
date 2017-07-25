@@ -15,6 +15,9 @@ class GalaxySimulator {
 		this.BHNumChanger = null;
 		this.BHNumChangeInvoked = false;
 		this.particleNumChangeInvoked = false;
+		this.chaseBHInvoked = false;
+		this.chaseBHClickedPos = {x: 0, y: 0};
+		this.chasingBH = -1;
 
 		this.timeClock = null;
 
@@ -118,6 +121,7 @@ class GalaxySimulator {
 		this.canvas.addEventListener("mousemove", function (e) { e.currentTarget.rootInstance.mouseMove(e); }, false);
 		this.canvas.addEventListener("touchstart", function (e) { e.currentTarget.rootInstance.mouseClick(e); }, false);
 		this.canvas.addEventListener("touchmove", function (e) { e.currentTarget.rootInstance.mouseMove(e); }, false);
+		this.canvas.addEventListener("dblclick", function (e) { e.currentTarget.rootInstance.mouseDblClick(e); }, false);
 		this.context = this.canvas.getContext("2d");
 		// Initialize canvas size
 		let canvasStyle = window.getComputedStyle(this.canvas);
@@ -244,6 +248,7 @@ class GalaxySimulator {
 			this.particleNumChangeInvoked = false;
 			this.particleNumChange();
 		}
+		this.automation();
 		this.physics();
 		this.draw();
 		this.loopEnded = true;
@@ -260,6 +265,21 @@ class GalaxySimulator {
 			return 0.25 * Math.PI;
 		} else {
 			return -0.25 * Math.PI;
+		}
+	}
+
+	automation()
+	{
+		let c = 1.0;
+		if (this.chasingBH >= 0) {
+			let N = this.chasingBH;
+			let d;
+			d = this.BH[N].position.x - this.viewOffset.x;
+			this.viewOffset.x += Math.sign(d) * Math.sqrt(Math.abs(d)) * c;
+			d = this.BH[N].position.y - this.viewOffset.y;
+			this.viewOffset.y += Math.sign(d) * Math.sqrt(Math.abs(d)) * c;
+			d = this.BH[N].position.z - this.viewOffset.z;
+			this.viewOffset.z += Math.sign(d) * Math.sqrt(Math.abs(d)) * c;
 		}
 	}
 
@@ -366,6 +386,7 @@ class GalaxySimulator {
 	{
 		let xy = {x: 0, y: 0};
 		let vel;
+		let dist = -1;
 		this.context.strokeStyle = 'blue';
 		for (let N = 0; N < this.BHNum; N++) {
 			vel = 100 * Math.sqrt(
@@ -383,7 +404,20 @@ class GalaxySimulator {
 			this.context.beginPath();
 			this.context.arc(xy.x, xy.y, 3, 0, 2 * Math.PI, false);
 			this.context.stroke();
+			if (this.chaseBHInvoked) {
+				let d =
+				    Math.pow(this.chaseBHClickedPos.x - xy.x, 2) +
+				    Math.pow(this.chaseBHClickedPos.y - xy.y, 2);
+				if (dist < 0) {
+					dist = d;
+					this.chasingBH = N;
+				} else if (d < dist) {
+					dist = d;
+					this.chasingBH = N;
+				}
+			}
 		}
+		this.chaseBHInvoked = false;
 	}
 
 	drawXYZVector()
@@ -659,10 +693,22 @@ class GalaxySimulator {
 				this.viewOffset.x -= move.x * this.fieldXYZ.X.x + move.y * this.fieldXYZ.X.y;
 				this.viewOffset.y -= move.x * this.fieldXYZ.Y.x + move.y * this.fieldXYZ.Y.y;
 				this.viewOffset.z -= move.x * this.fieldXYZ.Z.x + move.y * this.fieldXYZ.Z.y;
+			} else if (event.touches.length == 3) {
+				// chase
+				this.chaseBHInvoked = true;
+				this.chaseBHClickedPos = {x: event.touches[0].clientX, y: event.touches[0].clientY};
 			}
 			this.prev_clientX = event.touches[0].clientX;
 			this.prev_clientY = event.touches[0].clientY;
 		}
+	}
+
+	mouseDblClick(event)
+	{
+		// 3-fingers touch event will process in mouseMove()
+		event.preventDefault();
+		this.chaseBHInvoked = true;
+		this.chaseBHClickedPos = {x: event.clientX, y: event.clientY};
 	}
 
 	keyDown(event)
