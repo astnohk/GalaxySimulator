@@ -46,6 +46,7 @@ class GalaxySimulator {
 		this.BHNum = 7;
 		this.BH = new Array(this.BHNum);
 		this.BH_postmp = new Array(this.BHNum);
+		this.BHCoreSize = 80;
 
 		this.m = 1.0;
 		this.particleNum = 3000;
@@ -421,7 +422,7 @@ class GalaxySimulator {
 				this.context.strokeStyle = 'rgb(255, 0, 0)';
 				this.context.beginPath();
 				let r = this.normVect(xy);
-				this.context.arc(xy.x + this.displayOffset.x, xy.y + this.displayOffset.y, Math.min(3, Math.max(1, 3 / (this.zScale * r))), 0, 2 * Math.PI, false);
+				this.context.arc(xy.x + this.displayOffset.x, xy.y + this.displayOffset.y, Math.min(this.BHCoreSize, Math.max(1, this.BHCoreSize / (this.zScale * r))), 0, 2 * Math.PI, false);
 				this.context.stroke();
 			}
 			if (this.chaseBHInvoked) {
