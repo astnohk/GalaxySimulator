@@ -14,19 +14,25 @@ class GalaxySimulator {
 		this.touchCounting = false;
 
 		this.startstopButton = null;
+		this.viewReal3DButton = null;
 		this.particleNumChanger = null;
 		this.BHNumChanger = null;
 		this.BHNumChangeInvoked = false;
 		this.particleNumChangeInvoked = false;
+		this.viewReal3D = true;
+
+		// Chasing the selected galaxy
 		this.chaseBHInvoked = false;
 		this.chaseBHClickedPos = {x: 0, y: 0};
+		this.chaseBHDistance = 600;
 		this.chasingBH = -1;
 
 		this.timeClock = null;
 
 		this.canvas = null;
 		this.context = null;
-		this.scale = 0.5;
+		this.scale = 1.0;
+		this.zScale = 0.05;
 
 
 		this.cosmoSize = 800;
@@ -47,9 +53,16 @@ class GalaxySimulator {
 		this.particle_postmp = new Array(this.particleNum);
 
 
-		this.fieldXYZ = {X: {x: 1.0, y: 0.0, z: 0.0}, Y: {x: 0.0, y: 1.0, z: 0.0}, Z: {x: 0.0, y: 0.0, z: 1.0}};
-		this.viewOffset = {x: 0, y: 0, z: 0};
 		this.displayOffset = {x: 0, y: 0, z: 0};
+		this.camera = {
+			pos: {x: 0.0, y: 0.0, z: 0.0},
+			view: {
+				X: {x: 1.0, y: 0.0, z: 0.0},
+				Y: {x: 0.0, y: 1.0, z: 0.0},
+				Z: {x: 0.0, y: 0.0, z: -1.0}
+			},
+			F: 30
+		};
 		this.rotDegree = 3600;
 		this.colormapQuantize = 200;
 		this.colormap = {current: [], normal: new Array(this.colormapQuantize), bluesea: new Array(this.colormapQuantize)};
@@ -75,17 +88,11 @@ class GalaxySimulator {
 		// Create UI parts
 		this.prepareTools();
 
-		// Adjust initial view rotation
-		this.rotXYZ(this.fieldXYZ, 0, Math.PI * 120.0 / 180.0);
-		// Set root for setInterval
-
-		// Set view offset
-		this.viewOffset.x = 0;
-		this.viewOffset.y = 0;
-		this.viewOffset.z = 0;
 		// Set display offset
 		this.displayOffset.x = this.canvas.width / 2.0;
 		this.displayOffset.y = this.canvas.height / 2.0;
+		// Set camera position and view angle
+		this.camera.pos = {x: 0, y: 0, z: this.cosmoSize};
 
 		// Set initial position and velocity
 		this.initGalaxy();
@@ -142,6 +149,14 @@ class GalaxySimulator {
 		this.startstopButton.addEventListener("touchstart", function (e) { e.preventDefault(); e.currentTarget.rootInstance.startstop(e); }, false);
 		this.rootWindow.appendChild(this.startstopButton);
 
+		this.viewReal3DButton = document.createElement("div");
+		this.viewReal3DButton.rootInstance = this;
+		this.viewReal3DButton.innerHTML = "Real3D";
+		this.viewReal3DButton.id = "GalaxySimulatorViewReal3DButton";
+		this.viewReal3DButton.addEventListener("mousedown", function (e) { e.preventDefault(); e.currentTarget.rootInstance.switchViewReal3D(e); }, false);
+		this.viewReal3DButton.addEventListener("touchstart", function (e) { e.preventDefault(); e.currentTarget.rootInstance.switchViewReal3D(e); }, false);
+		this.rootWindow.appendChild(this.viewReal3DButton);
+
 		var particleNumChangerLabel = document.createElement("div");
 		particleNumChangerLabel.innerHTML = "particle";
 		particleNumChangerLabel.id = "GalaxySimulatorParticleNumChangerLabel";
@@ -191,7 +206,7 @@ class GalaxySimulator {
 			    };
 			this.BH_postmp[N] = {x: 0.0, y: 0.0, z: 0.0};
 			torque[N] = {X: {x: 1.0, y: 0.0, z: 0.0}, Y: {x: 0.0, y: 1.0, z: 0.0}, Z: {x: 0.0, y: 0.0, z: 1.0}};
-			this.rotXYZ(
+			torque[N] = this.rotXYZ(
 			    torque[N],
 			    2 * Math.PI * Math.random(),
 			    2 * Math.PI * Math.random());
@@ -276,12 +291,12 @@ class GalaxySimulator {
 		if (this.chasingBH >= 0) {
 			let N = this.chasingBH;
 			let d;
-			d = this.BH[N].position.x - this.viewOffset.x;
-			this.viewOffset.x += Math.sign(d) * Math.sqrt(Math.abs(d));
-			d = this.BH[N].position.y - this.viewOffset.y;
-			this.viewOffset.y += Math.sign(d) * Math.sqrt(Math.abs(d));
-			d = this.BH[N].position.z - this.viewOffset.z;
-			this.viewOffset.z += Math.sign(d) * Math.sqrt(Math.abs(d));
+			d = this.BH[N].position.x - this.camera.view.Z.x * this.chaseBHDistance - this.camera.pos.x;
+			this.camera.pos.x += Math.sign(d) * Math.sqrt(Math.abs(d));
+			d = this.BH[N].position.y - this.camera.view.Z.y * this.chaseBHDistance - this.camera.pos.y;
+			this.camera.pos.y += Math.sign(d) * Math.sqrt(Math.abs(d));
+			d = this.BH[N].position.z - this.camera.view.Z.z * this.chaseBHDistance - this.camera.pos.z;
+			this.camera.pos.z += Math.sign(d) * Math.sqrt(Math.abs(d));
 		}
 	}
 
@@ -293,10 +308,10 @@ class GalaxySimulator {
 				let x = this.BH[N].position.x - this.particle[n].position.x;
 				let y = this.BH[N].position.y - this.particle[n].position.y;
 				let z = this.BH[N].position.z - this.particle[n].position.z;
-				let r = Math.max(this.r_min, x * x + y * y + z * z);
-				f.x += x / Math.pow(r, 1.5);
-				f.y += y / Math.pow(r, 1.5);
-				f.z += z / Math.pow(r, 1.5);
+				let one_div_r = Math.pow(Math.max(this.r_min, x * x + y * y + z * z), -1.5);
+				f.x += x * one_div_r;
+				f.y += y * one_div_r;
+				f.z += z * one_div_r;
 			}
 			f.x *= this.G * this.m_BH;
 			f.y *= this.G * this.m_BH;
@@ -320,10 +335,10 @@ class GalaxySimulator {
 				let x = this.BH[N_o].position.x - this.BH[N].position.x;
 				let y = this.BH[N_o].position.y - this.BH[N].position.y;
 				let z = this.BH[N_o].position.z - this.BH[N].position.z;
-				let r = Math.max(this.r_min, x * x + y * y + z * z);
-				f.x += x / Math.pow(r, 1.5);
-				f.y += y / Math.pow(r, 1.5);
-				f.z += z / Math.pow(r, 1.5);
+				let one_div_r = Math.pow(Math.max(this.r_min, x * x + y * y + z * z), -1.5);
+				f.x += x * one_div_r;
+				f.y += y * one_div_r;
+				f.z += z * one_div_r;
 			}
 			f.x *= this.G * this.m_BH;
 			f.y *= this.G * this.m_BH;
@@ -368,19 +383,20 @@ class GalaxySimulator {
 	drawParticle()
 	{
 		let xy = {x: 0, y: 0};
-		this.context.strokeStyle = 'blue';
 		for (let n = 0; n < this.particleNum; n++) {
 			xy = this.calcView(
 			    this.particle[n].position.x,
 			    this.particle[n].position.y,
 			    this.particle[n].position.z,
 			    this.scale,
-			    this.viewOffset,
-			    this.fieldXYZ);
-			this.context.strokeStyle = this.colormap.current[(this.particle[n].id * 29) % this.colormapQuantize];
-			this.context.beginPath();
-			this.context.arc(xy.x, xy.y, 0.5, 0, 2 * Math.PI, false);
-			this.context.stroke();
+			    this.camera);
+			if (xy.z > this.camera.F) {
+				let r = this.normVect(xy);
+				this.context.strokeStyle = this.colormap.current[(this.particle[n].id * 29) % this.colormapQuantize];
+				this.context.beginPath();
+				this.context.arc(xy.x + this.displayOffset.x, xy.y + this.displayOffset.y, Math.max(0.1, 0.5 / (this.zScale * r)), 0, 2 * Math.PI, false);
+				this.context.stroke();
+			}
 		}
 	}
 
@@ -400,16 +416,18 @@ class GalaxySimulator {
 			    this.BH[N].position.y,
 			    this.BH[N].position.z,
 			    this.scale,
-			    this.viewOffset,
-			    this.fieldXYZ);
-			this.context.strokeStyle = 'rgb(255, 0, 0)';
-			this.context.beginPath();
-			this.context.arc(xy.x, xy.y, 3, 0, 2 * Math.PI, false);
-			this.context.stroke();
+			    this.camera);
+			if (xy.z > this.camera.F) {
+				this.context.strokeStyle = 'rgb(255, 0, 0)';
+				this.context.beginPath();
+				let r = this.normVect(xy);
+				this.context.arc(xy.x + this.displayOffset.x, xy.y + this.displayOffset.y, Math.min(3, Math.max(1, 3 / (this.zScale * r))), 0, 2 * Math.PI, false);
+				this.context.stroke();
+			}
 			if (this.chaseBHInvoked) {
 				let d =
-				    Math.pow(this.chaseBHClickedPos.x - xy.x, 2) +
-				    Math.pow(this.chaseBHClickedPos.y - xy.y, 2);
+				    Math.pow(this.chaseBHClickedPos.x - xy.x - this.displayOffset.x, 2) +
+				    Math.pow(this.chaseBHClickedPos.y - xy.y - this.displayOffset.y, 2);
 				if (dist < 0) {
 					dist = d;
 					this.chasingBH = N;
@@ -424,34 +442,39 @@ class GalaxySimulator {
 
 	drawXYZVector()
 	{
+		let fieldXYZ = {
+			X: {x: 1, y: 0, z: 0},
+			Y: {x: 0, y: 1, z: 0},
+			Z: {x: 0, y: 0, z: 1}
+		};
 		// Show XYZ coordinate
 		this.context.lineWidth = 2;
 		this.context.beginPath();
 		this.context.moveTo(42, 42);
 		this.context.strokeStyle = "red";
-		this.context.lineTo(42 + 42 * this.fieldXYZ.X.x, 42 + 42 * this.fieldXYZ.X.y);
-		let xy = this.calcXYZOnFieldXYZ(-7, -7, 0, this.fieldXYZ);
-		this.context.lineTo(42 + 42 * this.fieldXYZ.X.x + xy.x, 42 + 42 * this.fieldXYZ.X.y + xy.y);
-		xy = this.calcXYZOnFieldXYZ(-7, 8, 0, this.fieldXYZ);
-		this.context.lineTo(42 + 42 * this.fieldXYZ.X.x + xy.x, 42 + 42 * this.fieldXYZ.X.y + xy.y);
+		this.context.lineTo(42 + 42 * fieldXYZ.X.x, 42 + 42 * fieldXYZ.X.y);
+		let xy = this.calcXYZOnXYZ(-7, -7, 0, fieldXYZ);
+		this.context.lineTo(42 + 42 * fieldXYZ.X.x + xy.x, 42 + 42 * fieldXYZ.X.y + xy.y);
+		xy = this.calcXYZOnXYZ(-7, 8, 0, fieldXYZ);
+		this.context.lineTo(42 + 42 * fieldXYZ.X.x + xy.x, 42 + 42 * fieldXYZ.X.y + xy.y);
 		this.context.stroke();
 		this.context.beginPath();
 		this.context.moveTo(42, 42);
 		this.context.strokeStyle = "lime";
-		this.context.lineTo(42 + 42 * this.fieldXYZ.Y.x, 42 + 42 * this.fieldXYZ.Y.y);
-		xy = this.calcXYZOnFieldXYZ(7, -7, 0, this.fieldXYZ);
-		this.context.lineTo(42 + 42 * this.fieldXYZ.Y.x + xy.x, 42 + 42 * this.fieldXYZ.Y.y + xy.y);
-		xy = this.calcXYZOnFieldXYZ(-8, -7, 0, this.fieldXYZ);
-		this.context.lineTo(42 + 42 * this.fieldXYZ.Y.x + xy.x, 42 + 42 * this.fieldXYZ.Y.y + xy.y);
+		this.context.lineTo(42 + 42 * fieldXYZ.Y.x, 42 + 42 * fieldXYZ.Y.y);
+		xy = this.calcXYZOnXYZ(7, -7, 0, fieldXYZ);
+		this.context.lineTo(42 + 42 * fieldXYZ.Y.x + xy.x, 42 + 42 * fieldXYZ.Y.y + xy.y);
+		xy = this.calcXYZOnXYZ(-8, -7, 0, fieldXYZ);
+		this.context.lineTo(42 + 42 * fieldXYZ.Y.x + xy.x, 42 + 42 * fieldXYZ.Y.y + xy.y);
 		this.context.stroke();
 		this.context.beginPath();
 		this.context.moveTo(42, 42);
 		this.context.strokeStyle = "blue";
-		this.context.lineTo(42 + 42 * this.fieldXYZ.Z.x, 42 + 42 * this.fieldXYZ.Z.y);
-		xy = this.calcXYZOnFieldXYZ(0, 7, -7, this.fieldXYZ);
-		this.context.lineTo(42 + 42 * this.fieldXYZ.Z.x + xy.x, 42 + 42 * this.fieldXYZ.Z.y + xy.y);
-		xy = this.calcXYZOnFieldXYZ(0, -8, -7, this.fieldXYZ);
-		this.context.lineTo(42 + 42 * this.fieldXYZ.Z.x + xy.x, 42 + 42 * this.fieldXYZ.Z.y + xy.y);
+		this.context.lineTo(42 + 42 * fieldXYZ.Z.x, 42 + 42 * fieldXYZ.Z.y);
+		xy = this.calcXYZOnXYZ(0, 7, -7, fieldXYZ);
+		this.context.lineTo(42 + 42 * fieldXYZ.Z.x + xy.x, 42 + 42 * fieldXYZ.Z.y + xy.y);
+		xy = this.calcXYZOnXYZ(0, -8, -7, fieldXYZ);
+		this.context.lineTo(42 + 42 * fieldXYZ.Z.x + xy.x, 42 + 42 * fieldXYZ.Z.y + xy.y);
 		this.context.stroke();
 		this.context.lineWidth = 1;
 	}
@@ -482,22 +505,31 @@ class GalaxySimulator {
 		return vector;
 	}
 
-	calcXYZOnFieldXYZ(x, y, z, fieldXYZ)
+	calcXYZOnXYZ(x, y, z, XYZ)
 	{
 		let xy = {x: 0, y: 0};
-		xy.x = x * fieldXYZ.X.x + y * fieldXYZ.Y.x + z * fieldXYZ.Z.x;
-		xy.y = x * fieldXYZ.X.y + y * fieldXYZ.Y.y + z * fieldXYZ.Z.y;
+		xy.x = x * XYZ.X.x + y * XYZ.Y.x + z * XYZ.Z.x;
+		xy.y = x * XYZ.X.y + y * XYZ.Y.y + z * XYZ.Z.y;
 		return xy;
 	}
 
-	calcView(x, y, z, scale, viewOffset, fieldXYZ)
+	calcView(x, y, z, scale, camera)
 	{
-		let xy = {x: 0, y: 0};
-		let X = x - this.viewOffset.x;
-		let Y = y - this.viewOffset.y;
-		let Z = z - this.viewOffset.z;
-		xy.x = scale * (X * this.fieldXYZ.X.x + Y * this.fieldXYZ.Y.x + Z * this.fieldXYZ.Z.x) + this.displayOffset.x;
-		xy.y = scale * (X * this.fieldXYZ.X.y + Y * this.fieldXYZ.Y.y + Z * this.fieldXYZ.Z.y) + this.displayOffset.y;
+		let xy = {x: 0, y: 0, z: 0};
+		let X = x - camera.pos.x;
+		let Y = y - camera.pos.y;
+		let Z = z - camera.pos.z;
+		xy.z = scale * (X * camera.view.X.z + Y * camera.view.Y.z + Z * camera.view.Z.z);
+		if (this.viewReal3D) {
+			let z_scaled = this.zScale * xy.z;
+			xy.x = scale * (X * camera.view.X.x + Y * camera.view.Y.x + Z * camera.view.Z.x) *
+			    this.camera.F / Math.max(Number.EPSILON, z_scaled);
+			xy.y = scale * (X * camera.view.X.y + Y * camera.view.Y.y + Z * camera.view.Z.y) *
+			    this.camera.F / Math.max(Number.EPSILON, z_scaled);
+		} else {
+			xy.x = scale * (X * camera.view.X.x + Y * camera.view.Y.x + Z * camera.view.Z.x);
+			xy.y = scale * (X * camera.view.X.y + Y * camera.view.Y.y + Z * camera.view.Z.y);
+		}
 		return xy;
 	}
 
@@ -531,77 +563,46 @@ class GalaxySimulator {
 		return Z;
 	}
 
-	rotate(xyz, x, y)
+	rotate(xyz, y, xp)
 	{
 		let ret = {x: 0, y: 0, z: 0};
-		ret.x = xyz.x * Math.cos(x) - xyz.z * Math.sin(x);
-		ret.z = xyz.z * Math.cos(x) + xyz.x * Math.sin(x);
-		ret.y = xyz.y * Math.cos(y) - ret.z * Math.sin(y);
-		ret.z = ret.z * Math.cos(y) + xyz.y * Math.sin(y);
+		ret.x = xyz.x * Math.cos(y) - xyz.z * Math.sin(y);
+		ret.z = xyz.z * Math.cos(y) + xyz.x * Math.sin(y);
+		ret.y = xyz.y * Math.cos(xp) - ret.z * Math.sin(xp);
+		ret.z = ret.z * Math.cos(xp) + xyz.y * Math.sin(xp);
 		return ret;
 	}
 
 	// rotate normalized dimension vectors and output rotated vectors with normalizing
 	// note: this function do not return any value and modify the first argument;
-	rotXYZ(XYZ, x, y)
+	rotXYZ(XYZ, y, xp)
 	{
-		XYZ.X = this.rotate(XYZ.X, x, y);
-		XYZ.Y = this.rotate(XYZ.Y, x, y);
-		XYZ.Z = this.rotate(XYZ.Z, x, y);
+		let XYZrotated = {
+		    X: {x: 0, y: 0, z: 0},
+		    Y: {x: 0, y: 0, z: 0},
+		    Z: {x: 0, y: 0, z: 0}};
+		XYZrotated.X = this.rotate(XYZ.X, y, xp);
+		XYZrotated.Y = this.rotate(XYZ.Y, y, xp);
+		XYZrotated.Z = this.rotate(XYZ.Z, y, xp);
 		// Normalize
-		XYZ.X = this.normalizeVect(XYZ.X);
-		XYZ.Y = this.normalizeVect(XYZ.Y);
-		XYZ.Z = this.normalizeVect(XYZ.Z);
+		XYZrotated.X = this.normalizeVect(XYZrotated.X);
+		XYZrotated.Y = this.normalizeVect(XYZrotated.Y);
+		XYZrotated.Z = this.normalizeVect(XYZrotated.Z);
 		// Reduce residue of Y
-		let a = this.innerProductXYZ(XYZ.X, XYZ.Y);
-		XYZ.Y.x -= a * XYZ.X.x;
-		XYZ.Y.y -= a * XYZ.X.y;
-		XYZ.Y.z -= a * XYZ.X.z;
+		let a = this.innerProductXYZ(XYZrotated.X, XYZrotated.Y);
+		XYZrotated.Y.x -= a * XYZrotated.X.x;
+		XYZrotated.Y.y -= a * XYZrotated.X.y;
+		XYZrotated.Y.z -= a * XYZrotated.X.z;
 		// Reduce residue of Z
-		a = this.innerProductXYZ(XYZ.X, XYZ.Z);
-		XYZ.Z.x -= a * XYZ.X.x;
-		XYZ.Z.y -= a * XYZ.X.y;
-		XYZ.Z.z -= a * XYZ.X.z;
-		a = this.innerProductXYZ(XYZ.Y, XYZ.Z);
-		XYZ.Z.x -= a * XYZ.Y.x;
-		XYZ.Z.y -= a * XYZ.Y.y;
-		XYZ.Z.z -= a * XYZ.Y.z;
-	}
-
-	// rotate normalized dimension vectors as Z axis moment and output rotated vectors with normalizing
-	// note: this function do not return any value and modify the first argument;
-	rotXYZOnZ(XYZ, yaw, y)
-	{
-		let X = {x: 0, y: 0, z: 0};
-		let Y = {x: 0, y: 0, z: 0};
-		X = XYZ.X;
-		Y = XYZ.Y;
-		let cos = Math.cos(yaw);
-		let sin = Math.sin(yaw);
-		if (XYZ.Z.y < 0.0) {
-			XYZ.X.x = X.x * cos + Y.x * sin;
-			XYZ.X.y = X.y * cos + Y.y * sin;
-			XYZ.X.z = X.z * cos + Y.z * sin;
-			XYZ.Y.x = Y.x * cos - X.x * sin;
-			XYZ.Y.y = Y.y * cos - X.y * sin;
-			XYZ.Y.z = Y.z * cos - X.z * sin;
-		} else {
-			XYZ.X.x = X.x * cos - Y.x * sin;
-			XYZ.X.y = X.y * cos - Y.y * sin;
-			XYZ.X.z = X.z * cos - Y.z * sin;
-			XYZ.Y.x = Y.x * cos + X.x * sin;
-			XYZ.Y.y = Y.y * cos + X.y * sin;
-			XYZ.Y.z = Y.z * cos + X.z * sin;
-		}
-		// normalize
-		let norm = this.normVect(XYZ.X);
-		if (norm > 0.1) {
-			XYZ.X.x /= norm;
-			XYZ.X.y /= norm;
-			XYZ.X.z /= norm;
-		}
-		// rot with drag on Y axis same as normal rotation
-		this.rotXYZ(XYZ, 0, y);
+		a = this.innerProductXYZ(XYZrotated.X, XYZrotated.Z);
+		XYZrotated.Z.x -= a * XYZrotated.X.x;
+		XYZrotated.Z.y -= a * XYZrotated.X.y;
+		XYZrotated.Z.z -= a * XYZrotated.X.z;
+		a = this.innerProductXYZ(XYZrotated.Y, XYZrotated.Z);
+		XYZrotated.Z.x -= a * XYZrotated.Y.x;
+		XYZrotated.Z.y -= a * XYZrotated.Y.y;
+		XYZrotated.Z.z -= a * XYZrotated.Y.z;
+		return XYZrotated;
 	}
 
 	rotate3d(XYZ, rolling)
@@ -678,31 +679,29 @@ class GalaxySimulator {
 		event.preventDefault();
 		if (event.type === "mousemove") {
 			if ((event.buttons & 1) != 0) {
-				this.rotXYZOnZ(this.fieldXYZ,
+				this.camera.view = this.rotXYZ(this.camera.view,
 				    2.0 * Math.PI * (event.clientX - this.prev_clientX) / this.rotDegree,
 				    2.0 * Math.PI * (event.clientY - this.prev_clientY) / this.rotDegree);
 			} else if ((event.buttons & 4) != 0) {
 				let move = {x: 0, y: 0};
 				move.x = (event.clientX - this.prev_clientX) / this.scale;
 				move.y = (event.clientY - this.prev_clientY) / this.scale;
-				this.viewOffset.x -= move.x * this.fieldXYZ.X.x + move.y * this.fieldXYZ.X.y;
-				this.viewOffset.y -= move.x * this.fieldXYZ.Y.x + move.y * this.fieldXYZ.Y.y;
-				this.viewOffset.z -= move.x * this.fieldXYZ.Z.x + move.y * this.fieldXYZ.Z.y;
+				this.camera.pos.x -= move.x * this.camera.view.X.x + move.y * this.camera.view.Y.x;
+				this.camera.pos.y -= move.x * this.camera.view.X.y + move.y * this.camera.view.Y.y;
 			}
 			this.prev_clientX = event.clientX;
 			this.prev_clientY = event.clientY;
 		} else if (event.type === "touchmove") {
 			if (event.touches.length == 1) {
-				this.rotXYZOnZ(this.fieldXYZ,
+				this.camera.view = this.rotXYZ(this.camera.view,
 				    2.0 * Math.PI * (event.touches[0].clientX - this.prev_clientX) / this.rotDegree,
 				    2.0 * Math.PI * (event.touches[0].clientY - this.prev_clientY) / this.rotDegree);
 			} else if (event.touches.length == 2) {
 				let move = {x: 0, y: 0};
 				move.x = (event.touches[0].clientX - this.prev_clientX) / this.scale;
 				move.y = (event.touches[0].clientY - this.prev_clientY) / this.scale;
-				this.viewOffset.x -= move.x * this.fieldXYZ.X.x + move.y * this.fieldXYZ.X.y;
-				this.viewOffset.y -= move.x * this.fieldXYZ.Y.x + move.y * this.fieldXYZ.Y.y;
-				this.viewOffset.z -= move.x * this.fieldXYZ.Z.x + move.y * this.fieldXYZ.Z.y;
+				this.camera.pos.x -= move.x * this.camera.view.X.x + move.y * this.camera.view.Y.x;
+				this.camera.pos.y -= move.x * this.camera.view.X.y + move.y * this.camera.view.Y.y;
 			}
 			this.prev_clientX = event.touches[0].clientX;
 			this.prev_clientY = event.touches[0].clientY;
@@ -739,7 +738,13 @@ class GalaxySimulator {
 	wheelMove(event)
 	{
 		event.preventDefault();
-		this.scale = Math.exp(Math.log(this.scale) - event.deltaY * 0.001);
+		if (this.viewReal3D) {
+			this.camera.pos.x -= this.camera.view.Z.x * event.deltaY * this.scale;
+			this.camera.pos.y -= this.camera.view.Z.y * event.deltaY * this.scale;
+			this.camera.pos.z -= this.camera.view.Z.z * event.deltaY * this.scale;
+		} else {
+			this.scale = Math.exp(Math.log(this.scale) - event.deltaY * 0.001);
+		}
 	}
 
 	startstop()
@@ -750,6 +755,11 @@ class GalaxySimulator {
 		} else {
 			this.startLoop();
 		}
+	}
+
+	switchViewReal3D()
+	{
+		this.viewReal3D = !this.viewReal3D;
 	}
 
 	BHNumChange()
