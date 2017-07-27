@@ -18,6 +18,7 @@ initSystem()
 	GalaxySimulatorWindow.style.padding = "0";
 	GalaxySimulatorWindow.style.outline = "0";
 	GalaxySimulatorWindow.style.border = "0";
+	GalaxySimulatorWindow.style.backgroundColor = "rgba(20, 20, 20, 0.5)";
 	document.body.appendChild(GalaxySimulatorWindow);
 
 	GalaxySimulatorApplication = new GalaxySimulator(SystemRoot, GalaxySimulatorWindow);
