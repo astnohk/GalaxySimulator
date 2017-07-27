@@ -151,7 +151,7 @@ class GalaxySimulator {
 
 		this.viewReal3DButton = document.createElement("div");
 		this.viewReal3DButton.rootInstance = this;
-		this.viewReal3DButton.innerHTML = "Real3D";
+		this.viewReal3DButton.innerHTML = "to Pseudo3D";
 		this.viewReal3DButton.id = "GalaxySimulatorViewReal3DButton";
 		this.viewReal3DButton.addEventListener("mousedown", function (e) { e.preventDefault(); e.currentTarget.rootInstance.switchViewReal3D(e); }, false);
 		this.viewReal3DButton.addEventListener("touchstart", function (e) { e.preventDefault(); e.currentTarget.rootInstance.switchViewReal3D(e); }, false);
@@ -761,9 +761,9 @@ class GalaxySimulator {
 	{
 		this.viewReal3D = !this.viewReal3D;
 		if (this.viewReal3D) {
-			this.viewReal3DButton.innerHTML = "Pseudo3D";
+			this.viewReal3DButton.innerHTML = "to Pseudo3D";
 		} else {
-			this.viewReal3DButton.innerHTML = "Real3D";
+			this.viewReal3DButton.innerHTML = "to Real3D";
 		}
 	}
 
