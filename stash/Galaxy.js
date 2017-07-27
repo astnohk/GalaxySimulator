@@ -392,10 +392,9 @@ class GalaxySimulator {
 			    this.scale,
 			    this.camera);
 			if (xy.z > this.camera.F) {
-				let r = this.normVect(xy);
 				this.context.strokeStyle = this.colormap.current[(this.particle[n].id * 29) % this.colormapQuantize];
 				this.context.beginPath();
-				this.context.arc(xy.x + this.displayOffset.x, xy.y + this.displayOffset.y, Math.max(0.1, 0.5 / (this.zScale * r)), 0, 2 * Math.PI, false);
+				this.context.arc(xy.x + this.displayOffset.x, xy.y + this.displayOffset.y, Math.max(0.1, 0.5 / (this.zScale * xy.z)), 0, 2 * Math.PI, false);
 				this.context.stroke();
 			}
 		}
@@ -421,8 +420,7 @@ class GalaxySimulator {
 			if (xy.z > this.camera.F) {
 				this.context.strokeStyle = 'rgb(255, 0, 0)';
 				this.context.beginPath();
-				let r = this.normVect(xy);
-				this.context.arc(xy.x + this.displayOffset.x, xy.y + this.displayOffset.y, Math.min(this.BHCoreSize, Math.max(1, this.BHCoreSize / (this.zScale * r))), 0, 2 * Math.PI, false);
+				this.context.arc(xy.x + this.displayOffset.x, xy.y + this.displayOffset.y, Math.min(this.BHCoreSize, Math.max(1, this.BHCoreSize / (this.zScale * xy.z))), 0, 2 * Math.PI, false);
 				this.context.stroke();
 			}
 			if (this.chaseBHInvoked) {
