@@ -760,6 +760,11 @@ class GalaxySimulator {
 	switchViewReal3D()
 	{
 		this.viewReal3D = !this.viewReal3D;
+		if (this.viewReal3D) {
+			this.viewReal3DButton.innerHTML = "Pseudo3D";
+		} else {
+			this.viewReal3DButton.innerHTML = "Real3D";
+		}
 	}
 
 	BHNumChange()
