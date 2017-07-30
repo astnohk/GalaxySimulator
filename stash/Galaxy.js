@@ -54,12 +54,17 @@ class GalaxySimulator {
 		this.particle_postmp = new Array(this.particleNum);
 
 
+		this.XYZ_absolute = {
+			X: {x: 1.0, y: 0.0, z: 0.0},
+			Y: {x: 0.0, y: 1.0, z: 0.0},
+			Z: {x: 0.0, y: 0.0, z: 1.0}
+		};
 		this.displayOffset = {x: 0, y: 0, z: 0};
 		this.camera = {
 			pos: {x: 0.0, y: 0.0, z: 0.0},
 			view: {
 				X: {x: 1.0, y: 0.0, z: 0.0},
-				Y: {x: 0.0, y: 1.0, z: 0.0},
+				Y: {x: 0.0, y: -1.0, z: 0.0},
 				Z: {x: 0.0, y: 0.0, z: -1.0}
 			},
 			F: 30
@@ -383,18 +388,17 @@ class GalaxySimulator {
 
 	drawParticle()
 	{
-		let xy = {x: 0, y: 0};
+		let xy = {x: 0, y: 0, z: 0};
 		for (let n = 0; n < this.particleNum; n++) {
 			xy = this.calcView(
 			    this.particle[n].position.x,
 			    this.particle[n].position.y,
 			    this.particle[n].position.z,
-			    this.scale,
 			    this.camera);
 			if (xy.z > this.camera.F) {
 				this.context.strokeStyle = this.colormap.current[(this.particle[n].id * 29) % this.colormapQuantize];
 				this.context.beginPath();
-				this.context.arc(xy.x + this.displayOffset.x, xy.y + this.displayOffset.y, Math.max(0.1, 0.5 / (this.zScale * xy.z)), 0, 2 * Math.PI, false);
+				this.context.arc(xy.x + this.displayOffset.x, xy.y + this.displayOffset.y, Math.max(0.1, 2.0 / (this.zScale * xy.z)), 0, 2 * Math.PI, false);
 				this.context.stroke();
 			}
 		}
@@ -415,7 +419,6 @@ class GalaxySimulator {
 			    this.BH[N].position.x,
 			    this.BH[N].position.y,
 			    this.BH[N].position.z,
-			    this.scale,
 			    this.camera);
 			if (xy.z > this.camera.F) {
 				this.context.strokeStyle = 'rgb(255, 0, 0)';
@@ -441,6 +444,8 @@ class GalaxySimulator {
 
 	drawXYZVector()
 	{
+		let offset = {x: 100, y: 50};
+		let xy;
 		let fieldXYZ = {
 			X: {x: 1, y: 0, z: 0},
 			Y: {x: 0, y: 1, z: 0},
@@ -448,32 +453,61 @@ class GalaxySimulator {
 		};
 		// Show XYZ coordinate
 		this.context.lineWidth = 2;
+
 		this.context.beginPath();
-		this.context.moveTo(42, 42);
 		this.context.strokeStyle = "red";
-		this.context.lineTo(42 + 42 * fieldXYZ.X.x, 42 + 42 * fieldXYZ.X.y);
-		let xy = this.calcXYZOnXYZ(-7, -7, 0, fieldXYZ);
-		this.context.lineTo(42 + 42 * fieldXYZ.X.x + xy.x, 42 + 42 * fieldXYZ.X.y + xy.y);
-		xy = this.calcXYZOnXYZ(-7, 8, 0, fieldXYZ);
-		this.context.lineTo(42 + 42 * fieldXYZ.X.x + xy.x, 42 + 42 * fieldXYZ.X.y + xy.y);
+		this.context.moveTo(offset.x, offset.y);
+		xy = {x: offset.x + 42 * this.camera.view.X.x, y: offset.y + 42 * this.camera.view.X.y};
+		this.context.lineTo(xy.x, xy.y);
+		xy.x += 7 * this.camera.view.X.x + 7 * this.camera.view.Y.x;
+		xy.y += 7 * this.camera.view.X.y + 7 * this.camera.view.Y.y;
+		this.context.moveTo(xy.x, xy.y);
+		xy.x += -15 * this.camera.view.X.x - 15 * this.camera.view.Y.x;
+		xy.y += -15 * this.camera.view.X.y - 15 * this.camera.view.Y.y;
+		this.context.lineTo(xy.x, xy.y);
+		xy.x += 15 * this.camera.view.X.x;
+		xy.y += 15 * this.camera.view.X.y;
+		this.context.moveTo(xy.x, xy.y);
+		xy.x += -15 * this.camera.view.X.x + 15 * this.camera.view.Y.x;
+		xy.y += -15 * this.camera.view.X.y + 15 * this.camera.view.Y.y;
+		this.context.lineTo(xy.x, xy.y);
 		this.context.stroke();
+
 		this.context.beginPath();
-		this.context.moveTo(42, 42);
 		this.context.strokeStyle = "lime";
-		this.context.lineTo(42 + 42 * fieldXYZ.Y.x, 42 + 42 * fieldXYZ.Y.y);
-		xy = this.calcXYZOnXYZ(7, -7, 0, fieldXYZ);
-		this.context.lineTo(42 + 42 * fieldXYZ.Y.x + xy.x, 42 + 42 * fieldXYZ.Y.y + xy.y);
-		xy = this.calcXYZOnXYZ(-8, -7, 0, fieldXYZ);
-		this.context.lineTo(42 + 42 * fieldXYZ.Y.x + xy.x, 42 + 42 * fieldXYZ.Y.y + xy.y);
+		this.context.moveTo(offset.x, offset.y);
+		xy = {x: offset.x + 42 * this.camera.view.Y.x, y: offset.y + 42 * this.camera.view.Y.y};
+		this.context.lineTo(xy.x, xy.y);
+		this.context.lineTo(
+		    xy.x + 7 * this.camera.view.Y.x + 7 * this.camera.view.Z.x,
+		    xy.y + 7 * this.camera.view.Y.y + 7 * this.camera.view.Z.y);
+		this.context.moveTo(xy.x, xy.y);
+		this.context.lineTo(
+		    xy.x - 7 * this.camera.view.Y.x + 7 * this.camera.view.Z.x,
+		    xy.y - 7 * this.camera.view.Y.y + 7 * this.camera.view.Z.y);
+		this.context.moveTo(xy.x, xy.y);
+		this.context.lineTo(
+		    xy.x - 7 * this.camera.view.Z.x,
+		    xy.y - 7 * this.camera.view.Z.y);
 		this.context.stroke();
+
 		this.context.beginPath();
-		this.context.moveTo(42, 42);
 		this.context.strokeStyle = "blue";
-		this.context.lineTo(42 + 42 * fieldXYZ.Z.x, 42 + 42 * fieldXYZ.Z.y);
-		xy = this.calcXYZOnXYZ(0, 7, -7, fieldXYZ);
-		this.context.lineTo(42 + 42 * fieldXYZ.Z.x + xy.x, 42 + 42 * fieldXYZ.Z.y + xy.y);
-		xy = this.calcXYZOnXYZ(0, -8, -7, fieldXYZ);
-		this.context.lineTo(42 + 42 * fieldXYZ.Z.x + xy.x, 42 + 42 * fieldXYZ.Z.y + xy.y);
+		this.context.moveTo(offset.x, offset.y);
+		xy = {x: offset.x + 42 * this.camera.view.Z.x, y: offset.y + 42 * this.camera.view.Z.y};
+		this.context.lineTo(xy.x, xy.y);
+		xy.x += -7 * this.camera.view.Z.x + 7 * this.camera.view.X.x;
+		xy.y += -7 * this.camera.view.Z.y + 7 * this.camera.view.X.y;
+		this.context.moveTo(xy.x, xy.y);
+		xy.x += 15 * this.camera.view.Z.x;
+		xy.y += 15 * this.camera.view.Z.y;
+		this.context.lineTo(xy.x, xy.y);
+		xy.x += -15 * this.camera.view.Z.x - 15 * this.camera.view.X.x;
+		xy.y += -15 * this.camera.view.Z.y - 15 * this.camera.view.X.y;
+		this.context.lineTo(xy.x, xy.y);
+		xy.x += 15 * this.camera.view.Z.x;
+		xy.y += 15 * this.camera.view.Z.y;
+		this.context.lineTo(xy.x, xy.y);
 		this.context.stroke();
 		this.context.lineWidth = 1;
 	}
@@ -504,30 +538,30 @@ class GalaxySimulator {
 		return vector;
 	}
 
-	calcXYZOnXYZ(x, y, z, XYZ)
+	mapXYZ2XYZ(x, y, z, XYZ)
 	{
 		let xy = {x: 0, y: 0};
-		xy.x = x * XYZ.X.x + y * XYZ.Y.x + z * XYZ.Z.x;
-		xy.y = x * XYZ.X.y + y * XYZ.Y.y + z * XYZ.Z.y;
+		xy.x = x * XYZ.X.x + y * XYZ.X.y + z * XYZ.X.z;
+		xy.y = x * XYZ.Y.x + y * XYZ.Y.y + z * XYZ.Y.z;
+		xy.z = x * XYZ.Z.x + y * XYZ.Z.y + z * XYZ.Z.z;
 		return xy;
 	}
 
-	calcView(x, y, z, scale, camera)
+	calcView(x, y, z, camera)
 	{
 		let xy = {x: 0, y: 0, z: 0};
 		let X = x - camera.pos.x;
 		let Y = y - camera.pos.y;
 		let Z = z - camera.pos.z;
-		xy.z = scale * (X * camera.view.X.z + Y * camera.view.Y.z + Z * camera.view.Z.z);
+		xy = this.mapXYZ2XYZ(X, Y, Z, camera.view);
 		if (this.viewReal3D) {
 			let z_scaled = this.zScale * xy.z;
-			xy.x = scale * (X * camera.view.X.x + Y * camera.view.Y.x + Z * camera.view.Z.x) *
-			    this.camera.F / Math.max(Number.EPSILON, z_scaled);
-			xy.y = scale * (X * camera.view.X.y + Y * camera.view.Y.y + Z * camera.view.Z.y) *
-			    this.camera.F / Math.max(Number.EPSILON, z_scaled);
+			xy.x *= this.camera.F / Math.max(Number.EPSILON, z_scaled);
+			xy.y *= this.camera.F / Math.max(Number.EPSILON, z_scaled);
 		} else {
-			xy.x = scale * (X * camera.view.X.x + Y * camera.view.Y.x + Z * camera.view.Z.x);
-			xy.y = scale * (X * camera.view.X.y + Y * camera.view.Y.y + Z * camera.view.Z.y);
+			xy.x *= this.scale;
+			xy.y *= this.scale;
+			xy.z *= this.scale;
 		}
 		return xy;
 	}
@@ -562,27 +596,27 @@ class GalaxySimulator {
 		return Z;
 	}
 
-	rotate(xyz, y, xp)
+	rotate(xyz, y_axis, x_axis_p)
 	{
 		let ret = {x: 0, y: 0, z: 0};
-		ret.x = xyz.x * Math.cos(y) - xyz.z * Math.sin(y);
-		ret.z = xyz.z * Math.cos(y) + xyz.x * Math.sin(y);
-		ret.y = xyz.y * Math.cos(xp) - ret.z * Math.sin(xp);
-		ret.z = ret.z * Math.cos(xp) + xyz.y * Math.sin(xp);
+		ret.x = xyz.x * Math.cos(y_axis) + xyz.z * Math.sin(y_axis);
+		ret.z = xyz.z * Math.cos(y_axis) - xyz.x * Math.sin(y_axis);
+		ret.y = xyz.y * Math.cos(x_axis_p) - ret.z * Math.sin(x_axis_p);
+		ret.z = ret.z * Math.cos(x_axis_p) + xyz.y * Math.sin(x_axis_p);
 		return ret;
 	}
 
 	// rotate normalized dimension vectors and output rotated vectors with normalizing
-	// note: this function do not return any value and modify the first argument;
-	rotXYZ(XYZ, y, xp)
+	// note: this function do not return any value and modify the first argument
+	rotXYZ(XYZ, y_axis, x_axis_p)
 	{
 		let XYZrotated = {
-		    X: {x: 0, y: 0, z: 0},
-		    Y: {x: 0, y: 0, z: 0},
-		    Z: {x: 0, y: 0, z: 0}};
-		XYZrotated.X = this.rotate(XYZ.X, y, xp);
-		XYZrotated.Y = this.rotate(XYZ.Y, y, xp);
-		XYZrotated.Z = this.rotate(XYZ.Z, y, xp);
+		    X: null,
+		    Y: null,
+		    Z: null};
+		XYZrotated.X = this.rotate(XYZ.X, y_axis, x_axis_p);
+		XYZrotated.Y = this.rotate(XYZ.Y, y_axis, x_axis_p);
+		XYZrotated.Z = this.rotate(XYZ.Z, y_axis, x_axis_p);
 		// Normalize
 		XYZrotated.X = this.normalizeVect(XYZrotated.X);
 		XYZrotated.Y = this.normalizeVect(XYZrotated.Y);
@@ -602,6 +636,58 @@ class GalaxySimulator {
 		XYZrotated.Z.y -= a * XYZrotated.Y.y;
 		XYZrotated.Z.z -= a * XYZrotated.Y.z;
 		return XYZrotated;
+	}
+
+	rotateXYZ(XYZ, y_axis, x_axis_p)
+	{
+		let RET = {
+		    X: {x: 0, y: 0, z: 0},
+		    Y: {x: 0, y: 0, z: 0},
+		    Z: {x: 0, y: 0, z: 0}};
+		RET.X.x = XYZ.X.x * Math.cos(y_axis) + XYZ.Z.x * Math.sin(y_axis);
+		RET.X.y = XYZ.X.y * Math.cos(y_axis) + XYZ.Z.y * Math.sin(y_axis);
+		RET.X.z = XYZ.X.z * Math.cos(y_axis) + XYZ.Z.z * Math.sin(y_axis);
+		RET.Z.x = XYZ.Z.x * Math.cos(y_axis) - XYZ.X.x * Math.sin(y_axis);
+		RET.Z.y = XYZ.Z.y * Math.cos(y_axis) - XYZ.X.y * Math.sin(y_axis);
+		RET.Z.z = XYZ.Z.z * Math.cos(y_axis) - XYZ.X.z * Math.sin(y_axis);
+		RET.Y.x = XYZ.Y.x * Math.cos(x_axis_p) - RET.Z.x * Math.sin(x_axis_p);
+		RET.Y.y = XYZ.Y.y * Math.cos(x_axis_p) - RET.Z.y * Math.sin(x_axis_p);
+		RET.Y.z = XYZ.Y.z * Math.cos(x_axis_p) - RET.Z.z * Math.sin(x_axis_p);
+		RET.Z.x = RET.Z.x * Math.cos(x_axis_p) + XYZ.Y.x * Math.sin(x_axis_p);
+		RET.Z.y = RET.Z.y * Math.cos(x_axis_p) + XYZ.Y.y * Math.sin(x_axis_p);
+		RET.Z.z = RET.Z.z * Math.cos(x_axis_p) + XYZ.Y.z * Math.sin(x_axis_p);
+		return RET;
+	}
+
+	// rotate normalized dimension vectors and output rotated vectors with normalizing
+	// note: this function do not return any value and modify the first argument
+	rotCamera(y_axis, x_axis_p)
+	{
+		let XYZrotated = {
+		    X: null,
+		    Y: null,
+		    Z: null};
+		XYZrotated = this.rotateXYZ(this.camera.view, y_axis, x_axis_p);
+		// Normalize
+		XYZrotated.X = this.normalizeVect(XYZrotated.X);
+		XYZrotated.Y = this.normalizeVect(XYZrotated.Y);
+		XYZrotated.Z = this.normalizeVect(XYZrotated.Z);
+		// Reduce residue of Y
+		let a = this.innerProductXYZ(XYZrotated.X, XYZrotated.Y);
+		XYZrotated.Y.x -= a * XYZrotated.X.x;
+		XYZrotated.Y.y -= a * XYZrotated.X.y;
+		XYZrotated.Y.z -= a * XYZrotated.X.z;
+		// Reduce residue of Z
+		a = this.innerProductXYZ(XYZrotated.X, XYZrotated.Z);
+		XYZrotated.Z.x -= a * XYZrotated.X.x;
+		XYZrotated.Z.y -= a * XYZrotated.X.y;
+		XYZrotated.Z.z -= a * XYZrotated.X.z;
+		a = this.innerProductXYZ(XYZrotated.Y, XYZrotated.Z);
+		XYZrotated.Z.x -= a * XYZrotated.Y.x;
+		XYZrotated.Z.y -= a * XYZrotated.Y.y;
+		XYZrotated.Z.z -= a * XYZrotated.Y.z;
+		// Return
+		this.camera.view = XYZrotated;
 	}
 
 	rotate3d(XYZ, rolling)
@@ -669,7 +755,7 @@ class GalaxySimulator {
 			// Set touchCounting should be at end of event processing
 			this.touchCounting = true;
 			clearTimeout(this.touchCounter);
-			this.touchCounter = setTimeout(function () { console.log("clear"); root.touchCounting = false; }, 200);
+			this.touchCounter = setTimeout(function () { root.touchCounting = false; }, 200);
 		}
 	}
 
@@ -677,30 +763,40 @@ class GalaxySimulator {
 	{
 		event.preventDefault();
 		if (event.type === "mousemove") {
+			let move = {x: 0, y: 0};
+			move.x = event.clientX - this.prev_clientX;
+			move.y = event.clientY - this.prev_clientY;
 			if ((event.buttons & 1) != 0) {
-				this.camera.view = this.rotXYZ(this.camera.view,
-				    2.0 * Math.PI * (event.clientX - this.prev_clientX) / this.rotDegree,
-				    2.0 * Math.PI * (event.clientY - this.prev_clientY) / this.rotDegree);
+				this.rotCamera(
+				    -2.0 * Math.PI * move.x / this.rotDegree,
+				    2.0 * Math.PI * move.y / this.rotDegree);
 			} else if ((event.buttons & 4) != 0) {
-				let move = {x: 0, y: 0};
-				move.x = (event.clientX - this.prev_clientX) / this.scale;
-				move.y = (event.clientY - this.prev_clientY) / this.scale;
+				if (!this.viewReal3D) {
+					move.x /= this.scale;
+					move.y /= this.scale;
+				}
 				this.camera.pos.x -= move.x * this.camera.view.X.x + move.y * this.camera.view.Y.x;
 				this.camera.pos.y -= move.x * this.camera.view.X.y + move.y * this.camera.view.Y.y;
+				this.camera.pos.z -= move.x * this.camera.view.X.z + move.y * this.camera.view.Y.z;
 			}
 			this.prev_clientX = event.clientX;
 			this.prev_clientY = event.clientY;
 		} else if (event.type === "touchmove") {
+			let move = {x: 0, y: 0};
+			move.x = event.touches[0].clientX - this.prev_clientX;
+			move.y = event.touches[0].clientY - this.prev_clientY;
 			if (event.touches.length == 1) {
-				this.camera.view = this.rotXYZ(this.camera.view,
-				    2.0 * Math.PI * (event.touches[0].clientX - this.prev_clientX) / this.rotDegree,
-				    2.0 * Math.PI * (event.touches[0].clientY - this.prev_clientY) / this.rotDegree);
+				this.rotCamera(
+				    -2.0 * Math.PI * move.x / this.rotDegree,
+				    2.0 * Math.PI * move.y / this.rotDegree);
 			} else if (event.touches.length == 2) {
-				let move = {x: 0, y: 0};
-				move.x = (event.touches[0].clientX - this.prev_clientX) / this.scale;
-				move.y = (event.touches[0].clientY - this.prev_clientY) / this.scale;
+				if (!this.viewReal3D) {
+					move.x /= this.scale;
+					move.y /= this.scale;
+				}
 				this.camera.pos.x -= move.x * this.camera.view.X.x + move.y * this.camera.view.Y.x;
 				this.camera.pos.y -= move.x * this.camera.view.X.y + move.y * this.camera.view.Y.y;
+				this.camera.pos.z -= move.x * this.camera.view.X.z + move.y * this.camera.view.Y.z;
 			}
 			this.prev_clientX = event.touches[0].clientX;
 			this.prev_clientY = event.touches[0].clientY;
