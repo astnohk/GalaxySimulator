@@ -19,7 +19,6 @@ class GalaxySimulator {
 		this.BHNumChanger = null;
 		this.BHNumChangeInvoked = false;
 		this.particleNumChangeInvoked = false;
-		this.viewReal3D = true;
 
 		// Chasing the selected galaxy
 		this.chaseBHInvoked = false;
@@ -157,10 +156,8 @@ class GalaxySimulator {
 
 		this.viewReal3DButton = document.createElement("div");
 		this.viewReal3DButton.rootInstance = this;
-		this.viewReal3DButton.innerHTML = "to Pseudo3D";
+		this.viewReal3DButton.innerHTML = "null";
 		this.viewReal3DButton.id = "GalaxySimulatorViewReal3DButton";
-		this.viewReal3DButton.addEventListener("mousedown", function (e) { e.preventDefault(); e.currentTarget.rootInstance.switchViewReal3D(e); }, false);
-		this.viewReal3DButton.addEventListener("touchstart", function (e) { e.preventDefault(); e.currentTarget.rootInstance.switchViewReal3D(e); }, false);
 		this.rootWindow.appendChild(this.viewReal3DButton);
 
 		var particleNumChangerLabel = document.createElement("div");
@@ -554,15 +551,9 @@ class GalaxySimulator {
 		let Y = y - camera.pos.y;
 		let Z = z - camera.pos.z;
 		xy = this.mapXYZ2XYZ(X, Y, Z, camera.view);
-		if (this.viewReal3D) {
-			let z_scaled = this.zScale * xy.z;
-			xy.x *= this.camera.F / Math.max(Number.EPSILON, z_scaled);
-			xy.y *= this.camera.F / Math.max(Number.EPSILON, z_scaled);
-		} else {
-			xy.x *= this.scale;
-			xy.y *= this.scale;
-			xy.z *= this.scale;
-		}
+		let z_scaled = this.zScale * xy.z;
+		xy.x *= this.camera.F / Math.max(Number.EPSILON, z_scaled);
+		xy.y *= this.camera.F / Math.max(Number.EPSILON, z_scaled);
 		return xy;
 	}
 
@@ -771,10 +762,6 @@ class GalaxySimulator {
 				    -2.0 * Math.PI * move.x / this.rotDegree,
 				    2.0 * Math.PI * move.y / this.rotDegree);
 			} else if ((event.buttons & 4) != 0) {
-				if (!this.viewReal3D) {
-					move.x /= this.scale;
-					move.y /= this.scale;
-				}
 				this.camera.pos.x -= move.x * this.camera.view.X.x + move.y * this.camera.view.Y.x;
 				this.camera.pos.y -= move.x * this.camera.view.X.y + move.y * this.camera.view.Y.y;
 				this.camera.pos.z -= move.x * this.camera.view.X.z + move.y * this.camera.view.Y.z;
@@ -790,10 +777,6 @@ class GalaxySimulator {
 				    -2.0 * Math.PI * move.x / this.rotDegree,
 				    2.0 * Math.PI * move.y / this.rotDegree);
 			} else if (event.touches.length == 2) {
-				if (!this.viewReal3D) {
-					move.x /= this.scale;
-					move.y /= this.scale;
-				}
 				this.camera.pos.x -= move.x * this.camera.view.X.x + move.y * this.camera.view.Y.x;
 				this.camera.pos.y -= move.x * this.camera.view.X.y + move.y * this.camera.view.Y.y;
 				this.camera.pos.z -= move.x * this.camera.view.X.z + move.y * this.camera.view.Y.z;
@@ -833,13 +816,9 @@ class GalaxySimulator {
 	wheelMove(event)
 	{
 		event.preventDefault();
-		if (this.viewReal3D) {
-			this.camera.pos.x -= this.camera.view.Z.x * event.deltaY * this.scale;
-			this.camera.pos.y -= this.camera.view.Z.y * event.deltaY * this.scale;
-			this.camera.pos.z -= this.camera.view.Z.z * event.deltaY * this.scale;
-		} else {
-			this.scale = Math.exp(Math.log(this.scale) - event.deltaY * 0.001);
-		}
+		this.camera.pos.x -= this.camera.view.Z.x * event.deltaY * this.scale;
+		this.camera.pos.y -= this.camera.view.Z.y * event.deltaY * this.scale;
+		this.camera.pos.z -= this.camera.view.Z.z * event.deltaY * this.scale;
 	}
 
 	startstop()
@@ -849,16 +828,6 @@ class GalaxySimulator {
 			this.timeClock = null;
 		} else {
 			this.startLoop();
-		}
-	}
-
-	switchViewReal3D()
-	{
-		this.viewReal3D = !this.viewReal3D;
-		if (this.viewReal3D) {
-			this.viewReal3DButton.innerHTML = "to Pseudo3D";
-		} else {
-			this.viewReal3DButton.innerHTML = "to Real3D";
 		}
 	}
 
