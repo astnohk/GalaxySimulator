@@ -405,6 +405,8 @@ class GalaxySimulator {
 		let xy = {x: 0, y: 0};
 		let vel;
 		let dist = -1;
+		let newChasingBH = -1;
+
 		this.context.strokeStyle = 'blue';
 		for (let N = 0; N < this.BHNum; N++) {
 			vel = 100 * Math.sqrt(
@@ -428,11 +430,18 @@ class GalaxySimulator {
 				    Math.pow(this.chaseBHClickedPos.y - xy.y - this.displayOffset.y, 2);
 				if (dist < 0) {
 					dist = d;
-					this.chasingBH = N;
+					newChasingBH = N;
 				} else if (d < dist) {
 					dist = d;
-					this.chasingBH = N;
+					newChasingBH = N;
 				}
+			}
+		}
+		if (this.chaseBHInvoked) {
+			if (this.chasingBH == newChasingBH) {
+				this.chasingBH = -1;
+			} else {
+				this.chasingBH = newChasingBH;
 			}
 		}
 		this.chaseBHInvoked = false;
@@ -729,11 +738,6 @@ class GalaxySimulator {
 		return {x: XYZ.x + di.x, y: XYZ.y + di.y, z: XYZ.z + di.z};
 	}
 
-	extractTouches(a)
-	{
-		return {clientX: a.clientX, clientY: a.clientY, identifier: a.identifier};
-	}
-
 	mouseClick(event)
 	{
 		event.preventDefault();
@@ -777,8 +781,6 @@ class GalaxySimulator {
 			let move = {x: 0, y: 0};
 			if (touches_current.length == 1) {
 				let n = this.prev_touches.findIndex(function (element, index, touches) {
-					console.log({title: "element", value: element.identifier});
-					console.log({title: "current", value: this[0].identifier});
 					if (element.identifier == this[0].identifier) {
 						return true;
 					} else {
@@ -811,6 +813,11 @@ class GalaxySimulator {
 			}
 			this.prev_touches = touches_current.map(this.extractTouches);
 		}
+	}
+
+	extractTouches(a)
+	{
+		return {clientX: a.clientX, clientY: a.clientY, identifier: a.identifier};
 	}
 
 	wheelMove(event)
