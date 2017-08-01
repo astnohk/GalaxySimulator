@@ -30,7 +30,6 @@ class GalaxySimulator {
 
 		this.canvas = null;
 		this.context = null;
-		this.scale = 1.0;
 		this.zScale = 0.05;
 
 
@@ -72,8 +71,8 @@ class GalaxySimulator {
 		this.colormapQuantize = 200;
 		this.colormap = {current: [], normal: new Array(this.colormapQuantize), bluesea: new Array(this.colormapQuantize)};
 
-		this.prev_clientX = 0;
-		this.prev_clientY = 0;
+		this.prev_mouse = {x: 0, y: 0};
+		this.prev_touches = [];
 
 		// Initialize
 		this.init();
@@ -158,7 +157,7 @@ class GalaxySimulator {
 		this.viewReal3DButton.rootInstance = this;
 		this.viewReal3DButton.innerHTML = "null";
 		this.viewReal3DButton.id = "GalaxySimulatorViewReal3DButton";
-		this.rootWindow.appendChild(this.viewReal3DButton);
+		//this.rootWindow.appendChild(this.viewReal3DButton);
 
 		var particleNumChangerLabel = document.createElement("div");
 		particleNumChangerLabel.innerHTML = "particle";
@@ -441,7 +440,7 @@ class GalaxySimulator {
 
 	drawXYZVector()
 	{
-		let offset = {x: 100, y: 50};
+		let offset = {x: 100, y: 60};
 		let xy;
 		let fieldXYZ = {
 			X: {x: 1, y: 0, z: 0},
@@ -730,23 +729,29 @@ class GalaxySimulator {
 		return {x: XYZ.x + di.x, y: XYZ.y + di.y, z: XYZ.z + di.z};
 	}
 
+	extractTouches(a)
+	{
+		return {clientX: a.clientX, clientY: a.clientY, identifier: a.identifier};
+	}
+
 	mouseClick(event)
 	{
 		event.preventDefault();
 		let root = this;
 		if (event.type === "mousedown") {
-			this.prev_clientX = event.clientX;
-			this.prev_clientY = event.clientY;
+			this.prev_mouse = {clientX: event.clientX, clientY: event.clientY};
 		} else if (event.type === "touchstart") {
-			this.prev_clientX = event.touches[0].clientX;
-			this.prev_clientY = event.touches[0].clientY;
-			if (this.touchCounting) {
+			let touches_current = Array.from(event.touches);
+			this.prev_touches = touches_current.map(this.extractTouches);
+			if (this.touchCounting && event.touches.length == 1) {
 				this.touchDblTap(event);
 			}
-			// Set touchCounting should be at end of event processing
-			this.touchCounting = true;
-			clearTimeout(this.touchCounter);
-			this.touchCounter = setTimeout(function () { root.touchCounting = false; }, 200);
+			if (event.touches.length == 1) {
+				// Set touchCounting should be at end of event processing
+				this.touchCounting = true;
+				clearTimeout(this.touchCounter);
+				this.touchCounter = setTimeout(function () { root.touchCounting = false; }, 200);
+			}
 		}
 	}
 
@@ -755,8 +760,8 @@ class GalaxySimulator {
 		event.preventDefault();
 		if (event.type === "mousemove") {
 			let move = {x: 0, y: 0};
-			move.x = event.clientX - this.prev_clientX;
-			move.y = event.clientY - this.prev_clientY;
+			move.x = event.clientX - this.prev_mouse.clientX;
+			move.y = event.clientY - this.prev_mouse.clientY;
 			if ((event.buttons & 1) != 0) {
 				this.rotCamera(
 				    -2.0 * Math.PI * move.x / this.rotDegree,
@@ -766,24 +771,54 @@ class GalaxySimulator {
 				this.camera.pos.y -= move.x * this.camera.view.X.y + move.y * this.camera.view.Y.y;
 				this.camera.pos.z -= move.x * this.camera.view.X.z + move.y * this.camera.view.Y.z;
 			}
-			this.prev_clientX = event.clientX;
-			this.prev_clientY = event.clientY;
+			this.prev_mouse = {clientX: event.clientX, clientY: event.clientY};
 		} else if (event.type === "touchmove") {
+			let touches_current = Array.from(event.touches);
 			let move = {x: 0, y: 0};
-			move.x = event.touches[0].clientX - this.prev_clientX;
-			move.y = event.touches[0].clientY - this.prev_clientY;
-			if (event.touches.length == 1) {
-				this.rotCamera(
-				    -2.0 * Math.PI * move.x / this.rotDegree,
-				    2.0 * Math.PI * move.y / this.rotDegree);
-			} else if (event.touches.length == 2) {
-				this.camera.pos.x -= move.x * this.camera.view.X.x + move.y * this.camera.view.Y.x;
-				this.camera.pos.y -= move.x * this.camera.view.X.y + move.y * this.camera.view.Y.y;
-				this.camera.pos.z -= move.x * this.camera.view.X.z + move.y * this.camera.view.Y.z;
+			if (touches_current.length == 1) {
+				let n = this.prev_touches.findIndex(function (element, index, touches) {
+					console.log({title: "element", value: element.identifier});
+					console.log({title: "current", value: this[0].identifier});
+					if (element.identifier == this[0].identifier) {
+						return true;
+					} else {
+						return false;
+					}
+				    },
+				    touches_current);
+				if (n >= 0) {
+					move.x = touches_current[0].clientX - this.prev_touches[n].clientX;
+					move.y = touches_current[0].clientY - this.prev_touches[n].clientY;
+					this.rotCamera(
+					    -2.0 * Math.PI * move.x / this.rotDegree,
+					    2.0 * Math.PI * move.y / this.rotDegree);
+				}
+			} else if (touches_current.length == 2 && this.prev_touches.length == 2) {
+				let p0 = {x: this.prev_touches[0].clientX, y: this.prev_touches[0].clientY};
+				let p1 = {x: this.prev_touches[1].clientX, y: this.prev_touches[1].clientY};
+				let r0 = {x: touches_current[0].clientX, y: touches_current[0].clientY};
+				let r1 = {x: touches_current[1].clientX, y: touches_current[1].clientY};
+				move.x = ((r0.x + r1.x) - (p0.x + p1.x)) * 0.5;
+				move.y = ((r0.y + r1.y) - (p0.y + p1.y)) * 0.5;
+				let dp = Math.sqrt(Math.pow(p0.x - p1.x, 2) + Math.pow(p0.y - p1.y, 2));
+				let d = Math.sqrt(Math.pow(r0.x - r1.x, 2) + Math.pow(r0.y - r1.y, 2));
+				this.camera.pos.x -= move.x * this.camera.view.X.x + move.y * this.camera.view.Y.x
+				    + this.camera.view.Z.x * (dp - d);
+				this.camera.pos.y -= move.x * this.camera.view.X.y + move.y * this.camera.view.Y.y
+				    + this.camera.view.Z.y * (dp - d);
+				this.camera.pos.z -= move.x * this.camera.view.X.z + move.y * this.camera.view.Y.z
+				    + this.camera.view.Z.z * (dp - d);
 			}
-			this.prev_clientX = event.touches[0].clientX;
-			this.prev_clientY = event.touches[0].clientY;
+			this.prev_touches = touches_current.map(this.extractTouches);
 		}
+	}
+
+	wheelMove(event)
+	{
+		event.preventDefault();
+		this.camera.pos.x -= this.camera.view.Z.x * event.deltaY;
+		this.camera.pos.y -= this.camera.view.Z.y * event.deltaY;
+		this.camera.pos.z -= this.camera.view.Z.z * event.deltaY;
 	}
 
 	mouseDblClick(event)
@@ -811,14 +846,6 @@ class GalaxySimulator {
 			case "ArrowRight":
 				break;
 		}
-	}
-
-	wheelMove(event)
-	{
-		event.preventDefault();
-		this.camera.pos.x -= this.camera.view.Z.x * event.deltaY * this.scale;
-		this.camera.pos.y -= this.camera.view.Z.y * event.deltaY * this.scale;
-		this.camera.pos.z -= this.camera.view.Z.z * event.deltaY * this.scale;
 	}
 
 	startstop()
