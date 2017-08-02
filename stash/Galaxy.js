@@ -25,6 +25,7 @@ class GalaxySimulator {
 		this.chaseBHClickedPos = {x: 0, y: 0};
 		this.chaseBHDistance = 600;
 		this.chasingBH = -1;
+		this.chasingBHDistanceCurrent = 600;
 
 		this.timeClock = null;
 
@@ -293,11 +294,13 @@ class GalaxySimulator {
 		if (this.chasingBH >= 0) {
 			let N = this.chasingBH;
 			let d;
-			d = this.BH[N].position.x - this.camera.view.Z.x * this.chaseBHDistance - this.camera.pos.x;
+			let Distance = this.chaseBHDistance;
+			Distance = this.chasingBHDistanceCurrent;
+			d = this.BH[N].position.x - this.camera.view.Z.x * this.chasingBHDistanceCurrent - this.camera.pos.x;
 			this.camera.pos.x += Math.sign(d) * Math.sqrt(Math.abs(d));
-			d = this.BH[N].position.y - this.camera.view.Z.y * this.chaseBHDistance - this.camera.pos.y;
+			d = this.BH[N].position.y - this.camera.view.Z.y * this.chasingBHDistanceCurrent  - this.camera.pos.y;
 			this.camera.pos.y += Math.sign(d) * Math.sqrt(Math.abs(d));
-			d = this.BH[N].position.z - this.camera.view.Z.z * this.chaseBHDistance - this.camera.pos.z;
+			d = this.BH[N].position.z - this.camera.view.Z.z * this.chasingBHDistanceCurrent  - this.camera.pos.z;
 			this.camera.pos.z += Math.sign(d) * Math.sqrt(Math.abs(d));
 		}
 	}
@@ -826,18 +829,24 @@ class GalaxySimulator {
 		this.camera.pos.x -= this.camera.view.Z.x * event.deltaY;
 		this.camera.pos.y -= this.camera.view.Z.y * event.deltaY;
 		this.camera.pos.z -= this.camera.view.Z.z * event.deltaY;
+		this.chasingBHDistanceCurrent += event.deltaY;
+		if (this.chasingBHDistanceCurrent <= this.camera.F) {
+			this.chasingBHDistanceCurrent = this.camera.F + 1;
+		}
 	}
 
 	mouseDblClick(event)
 	{
 		event.preventDefault();
 		this.chaseBHInvoked = true;
+		this.chasingBHDistanceCurrent = this.chaseBHDistance;
 		this.chaseBHClickedPos = {x: event.clientX, y: event.clientY};
 	}
 
 	touchDblTap(event)
 	{
 		this.chaseBHInvoked = true;
+		this.chasingBHDistanceCurrent = this.chaseBHDistance;
 		this.chaseBHClickedPos = {x: event.touches[0].clientX, y: event.touches[0].clientY};
 	}
 
