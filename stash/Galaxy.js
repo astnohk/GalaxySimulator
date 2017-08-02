@@ -692,6 +692,27 @@ class GalaxySimulator {
 		this.camera.view = XYZrotated;
 	}
 
+	moveCamera(x, y, z)
+	{
+		this.camera.pos.x +=
+		    x * this.camera.view.X.x +
+		    y * this.camera.view.Y.x +
+		    z * this.camera.view.Z.x;
+		this.camera.pos.y +=
+		    x * this.camera.view.X.y +
+		    y * this.camera.view.Y.y +
+		    z * this.camera.view.Z.y;
+		this.camera.pos.z +=
+		    x * this.camera.view.X.z +
+		    y * this.camera.view.Y.z +
+		    z * this.camera.view.Z.z;
+
+		this.chasingBHDistanceCurrent -= z;
+		if (this.chasingBHDistanceCurrent <= this.camera.F) {
+			this.chasingBHDistanceCurrent = this.camera.F + 1;
+		}
+	}
+
 	rotate3d(XYZ, rolling)
 	{
 		let di_r = {x: 0, y: 0, z: 0};
@@ -774,9 +795,7 @@ class GalaxySimulator {
 				    -2.0 * Math.PI * move.x / this.rotDegree,
 				    2.0 * Math.PI * move.y / this.rotDegree);
 			} else if ((event.buttons & 4) != 0) {
-				this.camera.pos.x -= move.x * this.camera.view.X.x + move.y * this.camera.view.Y.x;
-				this.camera.pos.y -= move.x * this.camera.view.X.y + move.y * this.camera.view.Y.y;
-				this.camera.pos.z -= move.x * this.camera.view.X.z + move.y * this.camera.view.Y.z;
+				this.moveCamera(move.x, move.y, 0);
 			}
 			this.prev_mouse = {clientX: event.clientX, clientY: event.clientY};
 		} else if (event.type === "touchmove") {
@@ -807,12 +826,7 @@ class GalaxySimulator {
 				move.y = ((r0.y + r1.y) - (p0.y + p1.y)) * 0.5;
 				let dp = Math.sqrt(Math.pow(p0.x - p1.x, 2) + Math.pow(p0.y - p1.y, 2));
 				let d = Math.sqrt(Math.pow(r0.x - r1.x, 2) + Math.pow(r0.y - r1.y, 2));
-				this.camera.pos.x -= move.x * this.camera.view.X.x + move.y * this.camera.view.Y.x
-				    + this.camera.view.Z.x * (dp - d);
-				this.camera.pos.y -= move.x * this.camera.view.X.y + move.y * this.camera.view.Y.y
-				    + this.camera.view.Z.y * (dp - d);
-				this.camera.pos.z -= move.x * this.camera.view.X.z + move.y * this.camera.view.Y.z
-				    + this.camera.view.Z.z * (dp - d);
+				this.moveCamera(move.x, move.y, d - dp);
 			}
 			this.prev_touches = touches_current.map(this.extractTouches);
 		}
@@ -826,13 +840,7 @@ class GalaxySimulator {
 	wheelMove(event)
 	{
 		event.preventDefault();
-		this.camera.pos.x -= this.camera.view.Z.x * event.deltaY;
-		this.camera.pos.y -= this.camera.view.Z.y * event.deltaY;
-		this.camera.pos.z -= this.camera.view.Z.z * event.deltaY;
-		this.chasingBHDistanceCurrent += event.deltaY;
-		if (this.chasingBHDistanceCurrent <= this.camera.F) {
-			this.chasingBHDistanceCurrent = this.camera.F + 1;
-		}
+		this.moveCamera(0, 0, -event.deltaY);
 	}
 
 	mouseDblClick(event)
