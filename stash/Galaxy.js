@@ -14,11 +14,12 @@ class GalaxySimulator {
 		this.touchCounting = false;
 
 		this.startstopButton = null;
-		this.viewReal3DButton = null;
+		this.overwritingButton = null;
 		this.particleNumChanger = null;
 		this.BHNumChanger = null;
 		this.BHNumChangeInvoked = false;
 		this.particleNumChangeInvoked = false;
+		this.overwriting = false;
 
 		// Chasing the selected galaxy
 		this.chaseBHInvoked = false;
@@ -154,11 +155,13 @@ class GalaxySimulator {
 		this.startstopButton.addEventListener("touchstart", function (e) { e.preventDefault(); e.currentTarget.rootInstance.startstop(e); }, false);
 		this.rootWindow.appendChild(this.startstopButton);
 
-		this.viewReal3DButton = document.createElement("div");
-		this.viewReal3DButton.rootInstance = this;
-		this.viewReal3DButton.innerHTML = "null";
-		this.viewReal3DButton.id = "GalaxySimulatorViewReal3DButton";
-		//this.rootWindow.appendChild(this.viewReal3DButton);
+		this.overwritingButton = document.createElement("div");
+		this.overwritingButton.rootInstance = this;
+		this.overwritingButton.innerHTML = "Overwriting";
+		this.overwritingButton.id = "GalaxySimulatorOverWritingButton";
+		this.overwritingButton.addEventListener("mousedown", function (e) { e.preventDefault(); e.currentTarget.rootInstance.switchOverwriting(e); }, false);
+		this.overwritingButton.addEventListener("touchstart", function (e) { e.preventDefault(); e.currentTarget.rootInstance.switchOverwriting(e); }, false);
+		this.rootWindow.appendChild(this.overwritingButton);
 
 		var particleNumChangerLabel = document.createElement("div");
 		particleNumChangerLabel.innerHTML = "particle";
@@ -379,7 +382,9 @@ class GalaxySimulator {
 
 	draw()
 	{
-		this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+		if (!this.overwriting) {
+			this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+		}
 		this.drawParticle();
 		this.drawBH();
 		this.drawXYZVector();
@@ -912,6 +917,11 @@ class GalaxySimulator {
 		if (increase) {
 			this.initGalaxy();
 		}
+	}
+
+	switchOverwriting()
+	{
+		this.overwriting = !this.overwriting;
 	}
 }
 
