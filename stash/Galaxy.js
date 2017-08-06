@@ -16,9 +16,9 @@ class GalaxySimulator {
 		this.startstopButton = null;
 		this.overwritingButton = null;
 		this.particleNumChanger = null;
+		this.particleNumChangeInvoked = false;
 		this.BHNumChanger = null;
 		this.BHNumChangeInvoked = false;
-		this.particleNumChangeInvoked = false;
 		this.overwriting = false;
 
 		// Chasing the selected galaxy
@@ -45,13 +45,11 @@ class GalaxySimulator {
 		this.m_BH = 1.0e14;
 		this.BHNum = 7;
 		this.BH = new Array(this.BHNum);
-		this.BH_postmp = new Array(this.BHNum);
 		this.BHCoreSize = 80;
 
 		this.m = 1.0;
 		this.particleNum = 3000;
 		this.particle = new Array(this.particleNum);
-		this.particle_postmp = new Array(this.particleNum);
 
 
 		this.XYZ_absolute = {
@@ -210,7 +208,6 @@ class GalaxySimulator {
 					z: velInitMaxBH * (Math.random() - 0.5)
 				}
 			    };
-			this.BH_postmp[N] = {x: 0.0, y: 0.0, z: 0.0};
 			torque[N] = {X: {x: 1.0, y: 0.0, z: 0.0}, Y: {x: 0.0, y: 1.0, z: 0.0}, Z: {x: 0.0, y: 0.0, z: 1.0}};
 			torque[N] = this.rotXYZ(
 			    torque[N],
@@ -253,7 +250,6 @@ class GalaxySimulator {
 				},
 				id: N
 			    };
-			this.particle_postmp[n] = {x: 0.0, y: 0.0, z: 0.0};
 		}
 	}
 
@@ -327,12 +323,11 @@ class GalaxySimulator {
 			this.particle[n].velocity.x += f.x * this.dt;
 			this.particle[n].velocity.y += f.y * this.dt;
 			this.particle[n].velocity.z += f.z * this.dt;
-			this.particle_postmp[n].x = this.particle[n].position.x + this.particle[n].velocity.x * this.dt;
-			this.particle_postmp[n].y = this.particle[n].position.y + this.particle[n].velocity.y * this.dt;
-			this.particle_postmp[n].z = this.particle[n].position.z + this.particle[n].velocity.z * this.dt;
 		}
 		for (let n = 0; n < this.particleNum; n++) {
-			this.particle[n].position = this.particle_postmp[n];
+			this.particle[n].position.x += this.particle[n].velocity.x * this.dt;
+			this.particle[n].position.y += this.particle[n].velocity.y * this.dt;
+			this.particle[n].position.z += this.particle[n].velocity.z * this.dt;
 		}
 		for (let N = 0; N < this.BHNum; N++) {
 			let f = {x: 0, y: 0, z: 0};
@@ -354,12 +349,11 @@ class GalaxySimulator {
 			this.BH[N].velocity.x += f.x * this.dt;
 			this.BH[N].velocity.y += f.y * this.dt;
 			this.BH[N].velocity.z += f.z * this.dt;
-			this.BH_postmp[N].x = this.BH[N].position.x + this.BH[N].velocity.x * this.dt;
-			this.BH_postmp[N].y = this.BH[N].position.y + this.BH[N].velocity.y * this.dt;
-			this.BH_postmp[N].z = this.BH[N].position.z + this.BH[N].velocity.z * this.dt;
 		}
 		for (let N = 0; N < this.BHNum; N++) {
-			this.BH[N].position = this.BH_postmp[N];
+			this.BH[N].position.x += this.BH[N].velocity.x * this.dt;
+			this.BH[N].position.y += this.BH[N].velocity.y * this.dt;
+			this.BH[N].position.z += this.BH[N].velocity.z * this.dt;
 		}
 	}
 
