@@ -7,6 +7,7 @@ class GalaxySimulator {
 		this.rootWindow = rootWindow;
 		this.rootWindow.style.overflow = "hidden";
 		this.rootWindow.rootInstance = this;
+		this.rootWindow.addEventListener("resize", function (e) { e.currentTarget.rootInstance.viewModified(); }, false);
 		this.rootWindowStyle = window.getComputedStyle(this.rootWindow);
 		this.loopEnded = true;
 
@@ -15,11 +16,14 @@ class GalaxySimulator {
 
 		this.startstopButton = null;
 		this.overwritingButton = null;
+		this.view3DButton = null;
 		this.particleNumChanger = null;
 		this.particleNumChangeInvoked = false;
 		this.BHNumChanger = null;
 		this.BHNumChangeInvoked = false;
 		this.overwriting = false;
+		this.view3D = 0;
+		this.eyesDistance = 30;
 
 		// Chasing the selected galaxy
 		this.chaseBHInvoked = false;
@@ -160,6 +164,14 @@ class GalaxySimulator {
 		this.overwritingButton.addEventListener("mousedown", function (e) { e.preventDefault(); e.currentTarget.rootInstance.switchOverwriting(e); }, false);
 		this.overwritingButton.addEventListener("touchstart", function (e) { e.preventDefault(); e.currentTarget.rootInstance.switchOverwriting(e); }, false);
 		this.rootWindow.appendChild(this.overwritingButton);
+
+		this.view3DButton = document.createElement("div");
+		this.view3DButton.rootInstance = this;
+		this.view3DButton.innerHTML = "3D view switch (normal)";
+		this.view3DButton.id = "GalaxySimulatorView3DButton";
+		this.view3DButton.addEventListener("mousedown", function (e) { e.preventDefault(); e.currentTarget.rootInstance.switchView3D(e); }, false);
+		this.view3DButton.addEventListener("touchstart", function (e) { e.preventDefault(); e.currentTarget.rootInstance.switchView3D(e); }, false);
+		this.rootWindow.appendChild(this.view3DButton);
 
 		var particleNumChangerLabel = document.createElement("div");
 		particleNumChangerLabel.innerHTML = "particle";
@@ -374,17 +386,69 @@ class GalaxySimulator {
 		}
 	}
 
+	viewModified()
+	{
+		let newWindowSize = {x: parseInt(this.rootWindowStyle.width, 10), y: parseInt(this.rootWindowStyle.height, 10)};
+		this.canvas.width = newWindowSize.x;
+		this.canvas.height = newWindowSize.y;
+		this.displayOffset.x = newWindowSize.x / 2;
+		this.displayOffset.y = newWindowSize.y / 2;
+	}
+
 	draw()
 	{
+		let drawArea = {left: 0, right: this.canvas.width, top: 0, bottom: this.canvas.height};
+		this.viewModified();
 		if (!this.overwriting) {
 			this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
 		}
-		this.drawParticle();
-		this.drawBH();
+		if (this.view3D != 0) { // 3D view
+			let drawAreaL = {left: 0, right: Math.floor(this.canvas.width / 2), top: 0, bottom: this.canvas.height};
+			let drawAreaR = {left: Math.floor(this.canvas.width / 2 + 1), right: this.canvas.width, top: 0, bottom: this.canvas.height};
+			let displayOffsetL = {x: Math.floor(this.displayOffset.x / 2), y: this.displayOffset.y, z: 0};
+			let displayOffsetR = {x: Math.floor(this.displayOffset.x / 2) + drawAreaR.left, y: this.displayOffset.y, z: 0};
+			let cameraL = {
+				F: this.camera.F,
+				pos: {x: this.camera.pos.x, y: this.camera.pos.y, z: this.camera.pos.z},
+				view: {
+					X: {x: this.camera.view.X.x, y: this.camera.view.X.y, z: this.camera.view.X.z},
+					Y: {x: this.camera.view.Y.x, y: this.camera.view.Y.y, z: this.camera.view.Y.z},
+					Z: {x: this.camera.view.Z.x, y: this.camera.view.Z.y, z: this.camera.view.Z.z}
+				}
+			};
+			let cameraR = {
+				F: this.camera.F,
+				pos: {
+					x: this.camera.pos.x,
+					y: this.camera.pos.y,
+					z: this.camera.pos.z},
+				view: {
+					X: {x: this.camera.view.X.x, y: this.camera.view.X.y, z: this.camera.view.X.z},
+					Y: {x: this.camera.view.Y.x, y: this.camera.view.Y.y, z: this.camera.view.Y.z},
+					Z: {x: this.camera.view.Z.x, y: this.camera.view.Z.y, z: this.camera.view.Z.z}
+				}
+			};
+			if (this.view3D == 1) { // crossing view
+				cameraR.pos.x -= this.camera.view.X.x * this.eyesDistance;
+				cameraR.pos.y -= this.camera.view.X.y * this.eyesDistance;
+				cameraR.pos.z -= this.camera.view.X.z * this.eyesDistance;
+			} else { // parallel view
+				cameraR.pos.x += this.camera.view.X.x * this.eyesDistance;
+				cameraR.pos.y += this.camera.view.X.y * this.eyesDistance;
+				cameraR.pos.z += this.camera.view.X.z * this.eyesDistance;
+			}
+			this.drawParticle(cameraL, displayOffsetL, drawAreaL);
+			this.drawBH(cameraL, displayOffsetL, drawAreaL);
+			this.drawParticle(cameraR, displayOffsetR, drawAreaR);
+			this.drawBH(cameraR, displayOffsetR, drawAreaR);
+		} else {
+			this.drawParticle(this.camera, this.displayOffset, drawArea);
+			this.drawBH(this.camera, this.displayOffset, drawArea);
+		}
 		this.drawXYZVector();
 	}
 
-	drawParticle()
+	drawParticle(camera, offset, area)
 	{
 		let xy = {x: 0, y: 0, z: 0};
 		for (let n = 0; n < this.particleNum; n++) {
@@ -392,17 +456,22 @@ class GalaxySimulator {
 			    this.particle[n].position.x,
 			    this.particle[n].position.y,
 			    this.particle[n].position.z,
-			    this.camera);
-			if (xy.z > this.camera.F) {
+			    camera);
+			xy.x += offset.x;
+			xy.y += offset.y;
+			xy.z += offset.z;
+			if (area.left <= xy.x && xy.x < area.right &&
+			    area.top <= xy.y && xy.y < area.bottom &&
+			    xy.z > camera.F) {
 				this.context.strokeStyle = this.colormap.current[(this.particle[n].id * 29) % this.colormapQuantize];
 				this.context.beginPath();
-				this.context.arc(xy.x + this.displayOffset.x, xy.y + this.displayOffset.y, Math.max(0.1, 2.0 / (this.zScale * xy.z)), 0, 2 * Math.PI, false);
+				this.context.arc(xy.x, xy.y, Math.max(0.1, 2.0 / (this.zScale * xy.z)), 0, 2 * Math.PI, false);
 				this.context.stroke();
 			}
 		}
 	}
 
-	drawBH()
+	drawBH(camera, offset, area)
 	{
 		let xy = {x: 0, y: 0};
 		let vel;
@@ -419,21 +488,24 @@ class GalaxySimulator {
 			    this.BH[N].position.x,
 			    this.BH[N].position.y,
 			    this.BH[N].position.z,
-			    this.camera);
-			if (xy.z > this.camera.F) {
+			    camera);
+			// Add view offset
+			xy.x += offset.x;
+			xy.y += offset.y;
+			xy.z += offset.z;
+			if (area.left <= xy.x && xy.x < area.right &&
+			    area.top <= xy.y && xy.y < area.bottom &&
+			    xy.z > camera.F) {
 				this.context.strokeStyle = 'rgb(255, 0, 0)';
 				this.context.beginPath();
-				this.context.arc(xy.x + this.displayOffset.x, xy.y + this.displayOffset.y, Math.min(this.BHCoreSize, Math.max(1, this.BHCoreSize / (this.zScale * xy.z))), 0, 2 * Math.PI, false);
+				this.context.arc(xy.x, xy.y, Math.min(this.BHCoreSize, Math.max(1, this.BHCoreSize / (this.zScale * xy.z))), 0, 2 * Math.PI, false);
 				this.context.stroke();
 			}
 			if (this.chaseBHInvoked) {
 				let d =
-				    Math.pow(this.chaseBHClickedPos.x - xy.x - this.displayOffset.x, 2) +
-				    Math.pow(this.chaseBHClickedPos.y - xy.y - this.displayOffset.y, 2);
-				if (dist < 0) {
-					dist = d;
-					newChasingBH = N;
-				} else if (d < dist) {
+				    Math.pow(this.chaseBHClickedPos.x - xy.x, 2) +
+				    Math.pow(this.chaseBHClickedPos.y - xy.y, 2);
+				if (dist < 0 || d < dist) {
 					dist = d;
 					newChasingBH = N;
 				}
@@ -916,6 +988,21 @@ class GalaxySimulator {
 	switchOverwriting()
 	{
 		this.overwriting = !this.overwriting;
+	}
+
+	switchView3D()
+	{
+		this.view3D = (this.view3D + 1) % 3;
+		switch (this.view3D) {
+			case 1:
+				this.view3DButton.innerHTML = "3D view switch (cross)";
+				break;
+			case 2:
+				this.view3DButton.innerHTML = "3D view switch (parallel)";
+				break;
+			default:
+				this.view3DButton.innerHTML = "3D view switch (normal)";
+		}
 	}
 }
 
