@@ -22,5 +22,6 @@ initSystem()
 	document.body.appendChild(GalaxySimulatorWindow);
 
 	GalaxySimulatorApplication = new GalaxySimulator(SystemRoot, GalaxySimulatorWindow);
+	SystemRoot.windowScroller.style.display = "none";
 }
 
