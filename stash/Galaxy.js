@@ -18,8 +18,10 @@ class GalaxySimulator {
 		this.overwritingButton = null;
 		this.view3DButton = null;
 		this.particleNumChanger = null;
+		this.particleNumChangerLabel = null;
 		this.particleNumChangeInvoked = false;
 		this.BHNumChanger = null;
+		this.BHNumChangerLabel = null;
 		this.BHNumChangeInvoked = false;
 		this.overwriting = false;
 		this.view3D = 0;
@@ -173,11 +175,11 @@ class GalaxySimulator {
 		this.view3DButton.addEventListener("touchstart", function (e) { e.preventDefault(); e.currentTarget.rootInstance.switchView3D(e); }, false);
 		this.rootWindow.appendChild(this.view3DButton);
 
-		var particleNumChangerLabel = document.createElement("div");
-		particleNumChangerLabel.innerHTML = "particle";
-		particleNumChangerLabel.id = "GalaxySimulatorParticleNumChangerLabel";
-		particleNumChangerLabel.className = "GalaxySimulatorInputLabel";
-		this.rootWindow.appendChild(particleNumChangerLabel);
+		this.particleNumChangerLabel = document.createElement("div");
+		this.particleNumChangerLabel.innerHTML = "particle";
+		this.particleNumChangerLabel.id = "GalaxySimulatorParticleNumChangerLabel";
+		this.particleNumChangerLabel.className = "GalaxySimulatorInputLabel";
+		this.rootWindow.appendChild(this.particleNumChangerLabel);
 		this.particleNumChanger = document.createElement("input");
 		this.particleNumChanger.rootInstance = this;
 		this.particleNumChanger.type = "text";
@@ -188,11 +190,11 @@ class GalaxySimulator {
 		this.particleNumChanger.addEventListener("change", function (e) { e.preventDefault(); e.currentTarget.rootInstance.particleNumChangeInvoked = true; }, false);
 		this.rootWindow.appendChild(this.particleNumChanger);
 
-		var BHNumChangerLabel = document.createElement("div");
-		BHNumChangerLabel.innerHTML = "black hole";
-		BHNumChangerLabel.id = "GalaxySimulatorBHNumChangerLabel";
-		BHNumChangerLabel.className = "GalaxySimulatorInputLabel";
-		this.rootWindow.appendChild(BHNumChangerLabel);
+		this.BHNumChangerLabel = document.createElement("div");
+		this.BHNumChangerLabel.innerHTML = "black hole";
+		this.BHNumChangerLabel.id = "GalaxySimulatorBHNumChangerLabel";
+		this.BHNumChangerLabel.className = "GalaxySimulatorInputLabel";
+		this.rootWindow.appendChild(this.BHNumChangerLabel);
 		this.BHNumChanger = document.createElement("input");
 		this.BHNumChanger.rootInstance = this;
 		this.BHNumChanger.type = "text";
@@ -996,12 +998,30 @@ class GalaxySimulator {
 		switch (this.view3D) {
 			case 1:
 				this.view3DButton.innerHTML = "3D view switch (cross)";
+				this.startstopButton.style.opacity = "0.0";
+				this.overwritingButton.style.opacity = "0.0";
+				this.particleNumChangerLabel.style.opacity = "0.0";
+				this.particleNumChanger.style.opacity = "0.0";
+				this.BHNumChangerLabel.style.opacity = "0.0";
+				this.BHNumChanger.style.opacity = "0.0";
 				break;
 			case 2:
 				this.view3DButton.innerHTML = "3D view switch (parallel)";
+				this.startstopButton.style.opacity = "0.0";
+				this.overwritingButton.style.opacity = "0.0";
+				this.particleNumChangerLabel.style.opacity = "0.0";
+				this.particleNumChanger.style.opacity = "0.0";
+				this.BHNumChangerLabel.style.opacity = "0.0";
+				this.BHNumChanger.style.opacity = "0.0";
 				break;
 			default:
 				this.view3DButton.innerHTML = "3D view switch (normal)";
+				this.startstopButton.style.opacity = "1.0";
+				this.overwritingButton.style.opacity = "1.0";
+				this.particleNumChangerLabel.style.opacity = "1.0";
+				this.particleNumChanger.style.opacity = "1.0";
+				this.BHNumChangerLabel.style.opacity = "1.0";
+				this.BHNumChanger.style.opacity = "1.0";
 		}
 	}
 }
