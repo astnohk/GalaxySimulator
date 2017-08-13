@@ -7,7 +7,6 @@ class GalaxySimulator {
 		this.rootWindow = rootWindow;
 		this.rootWindow.style.overflow = "hidden";
 		this.rootWindow.rootInstance = this;
-		this.rootWindow.addEventListener("resize", function (e) { e.currentTarget.rootInstance.viewModified(); }, false);
 		this.rootWindowStyle = window.getComputedStyle(this.rootWindow);
 		this.loopEnded = true;
 
@@ -391,10 +390,13 @@ class GalaxySimulator {
 	viewModified()
 	{
 		let newWindowSize = {x: parseInt(this.rootWindowStyle.width, 10), y: parseInt(this.rootWindowStyle.height, 10)};
-		this.canvas.width = newWindowSize.x;
-		this.canvas.height = newWindowSize.y;
-		this.displayOffset.x = newWindowSize.x / 2;
-		this.displayOffset.y = newWindowSize.y / 2;
+		if (this.canvas.width != newWindowSize.x ||
+		    this.canvas.height != newWindowSize.y) {
+			this.canvas.width = newWindowSize.x;
+			this.canvas.height = newWindowSize.y;
+			this.displayOffset.x = newWindowSize.x / 2;
+			this.displayOffset.y = newWindowSize.y / 2;
+		}
 	}
 
 	draw()
@@ -403,6 +405,7 @@ class GalaxySimulator {
 		this.viewModified();
 		if (!this.overwriting) {
 			this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+			console.log("clear");
 		}
 		if (this.view3D != 0) { // 3D view
 			let drawAreaL = {left: 0, right: Math.floor(this.canvas.width / 2), top: 0, bottom: this.canvas.height};
