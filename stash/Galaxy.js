@@ -405,7 +405,6 @@ class GalaxySimulator {
 		this.viewModified();
 		if (!this.overwriting) {
 			this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-			console.log("clear");
 		}
 		if (this.view3D != 0) { // 3D view
 			let drawAreaL = {left: 0, right: Math.floor(this.canvas.width / 2), top: 0, bottom: this.canvas.height};
