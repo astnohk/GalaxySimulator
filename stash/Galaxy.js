@@ -50,7 +50,7 @@ class GalaxySimulator {
 		this.m_BH = 1.0e14;
 		this.BHNum = 7;
 		this.BH = new Array(this.BHNum);
-		this.BHCoreSize = 80;
+		this.BHCoreSize = 8;
 
 		this.m = 1.0;
 		this.particleNum = 3000;
@@ -454,67 +454,70 @@ class GalaxySimulator {
 
 	drawParticle(camera, offset, area)
 	{
-		let xy = {x: 0, y: 0, z: 0};
+		let xyz = {x: 0, y: 0, z: 0};
+		this.context.lineWidth = 0.75;
 		for (let n = 0; n < this.particleNum; n++) {
-			xy = this.calcView(
+			xyz = this.calcView(
 			    this.particle[n].position.x,
 			    this.particle[n].position.y,
 			    this.particle[n].position.z,
 			    camera);
-			xy.x += offset.x;
-			xy.y += offset.y;
-			xy.z += offset.z;
-			if (area.left <= xy.x && xy.x < area.right &&
-			    area.top <= xy.y && xy.y < area.bottom &&
-			    xy.z > camera.F) {
+			xyz.x += offset.x;
+			xyz.y += offset.y;
+			xyz.z += offset.z;
+			if (area.left <= xyz.x && xyz.x < area.right &&
+			    area.top <= xyz.y && xyz.y < area.bottom &&
+			    xyz.z > camera.F) {
 				this.context.strokeStyle = this.colormap.current[(this.particle[n].id * 29) % this.colormapQuantize];
 				this.context.beginPath();
-				this.context.arc(xy.x, xy.y, Math.max(0.1, 2.0 / (this.zScale * xy.z)), 0, 2 * Math.PI, false);
+				this.context.arc(xyz.x, xyz.y, Math.max(0.05, 1.0 * this.camera.F / (this.zScale * xyz.z)), 0, 2 * Math.PI, false);
 				this.context.stroke();
 			}
 		}
+		this.context.lineWidth = 1;
 	}
 
 	drawBH(camera, offset, area)
 	{
-		let xy = {x: 0, y: 0};
+		let xyz = {x: 0, y: 0};
 		let vel;
 		let dist = -1;
 		let newChasingBH = -1;
 
-		this.context.strokeStyle = 'blue';
+		this.context.strokeStyle = 'rgb(255, 0, 0)';
+		this.context.lineWidth = 1.5;
 		for (let N = 0; N < this.BHNum; N++) {
 			vel = 100 * Math.sqrt(
 			    this.BH[N].velocity.x * this.BH[N].velocity.x +
 			    this.BH[N].velocity.y * this.BH[N].velocity.y +
 			    this.BH[N].velocity.z * this.BH[N].velocity.z);
-			xy = this.calcView(
+			xyz = this.calcView(
 			    this.BH[N].position.x,
 			    this.BH[N].position.y,
 			    this.BH[N].position.z,
 			    camera);
 			// Add view offset
-			xy.x += offset.x;
-			xy.y += offset.y;
-			xy.z += offset.z;
-			if (area.left <= xy.x && xy.x < area.right &&
-			    area.top <= xy.y && xy.y < area.bottom &&
-			    xy.z > camera.F) {
-				this.context.strokeStyle = 'rgb(255, 0, 0)';
+			xyz.x += offset.x;
+			xyz.y += offset.y;
+			xyz.z += offset.z;
+			if (area.left <= xyz.x && xyz.x < area.right &&
+			    area.top <= xyz.y && xyz.y < area.bottom &&
+			    xyz.z > camera.F) {
 				this.context.beginPath();
-				this.context.arc(xy.x, xy.y, Math.min(this.BHCoreSize, Math.max(1, this.BHCoreSize / (this.zScale * xy.z))), 0, 2 * Math.PI, false);
+				this.context.arc(xyz.x, xyz.y, Math.max(1, this.BHCoreSize * this.camera.F / (this.zScale * xyz.z)), 0, 2 * Math.PI, false);
 				this.context.stroke();
 			}
 			if (this.chaseBHInvoked) {
 				let d =
-				    Math.pow(this.chaseBHClickedPos.x - xy.x, 2) +
-				    Math.pow(this.chaseBHClickedPos.y - xy.y, 2);
+				    Math.pow(this.chaseBHClickedPos.x - xyz.x, 2) +
+				    Math.pow(this.chaseBHClickedPos.y - xyz.y, 2);
 				if (dist < 0 || d < dist) {
 					dist = d;
 					newChasingBH = N;
 				}
 			}
 		}
+		this.context.lineWidth = 1;
 		if (this.chaseBHInvoked) {
 			if (this.chasingBH == newChasingBH) {
 				this.chasingBH = -1;
