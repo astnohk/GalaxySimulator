@@ -849,7 +849,7 @@ class GalaxySimulator {
 			this.prev_mouse = this.pointerPositionDecoder(event);
 		} else if (event.type === "touchstart") {
 			let touches_current = Array.from(event.touches);
-			this.prev_touches = touches_current.map(this.extractTouches);
+			this.prev_touches = touches_current.map(this.extractTouches, this);
 			if (this.touchCounting && event.touches.length == 1) {
 				this.touchDblTap(event);
 			}
@@ -899,8 +899,8 @@ class GalaxySimulator {
 					    2.0 * Math.PI * move.y / this.rotDegree);
 				}
 			} else if (touches_current.length == 2 && this.prev_touches.length == 2) {
-				let p0 = this.pointerPositionDecoder(this.prev_touches[0]);
-				let p1 = this.pointerPositionDecoder(this.prev_touches[1]);
+				let p0 = this.prev_touches[0];
+				let p1 = this.prev_touches[1];
 				let r0 = this.pointerPositionDecoder(touches_current[0]);
 				let r1 = this.pointerPositionDecoder(touches_current[1]);
 				move.x = ((r0.x + r1.x) - (p0.x + p1.x)) * 0.5;
@@ -909,7 +909,7 @@ class GalaxySimulator {
 				let d = Math.sqrt(Math.pow(r0.x - r1.x, 2) + Math.pow(r0.y - r1.y, 2));
 				this.moveCamera(move.x, move.y, d - dp);
 			}
-			this.prev_touches = touches_current.map(this.extractTouches);
+			this.prev_touches = touches_current.map(this.extractTouches, this);
 		}
 	}
 
@@ -925,7 +925,7 @@ class GalaxySimulator {
 
 	extractTouches(a)
 	{
-		let pos = pointerPositionDecoder(a);
+		let pos = this.pointerPositionDecoder(a);
 		return {x: pos.x, y: pos.y, identifier: a.identifier};
 	}
 
