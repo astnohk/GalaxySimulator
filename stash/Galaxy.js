@@ -845,7 +845,8 @@ class GalaxySimulator {
 		event.preventDefault();
 		let root = this;
 		if (event.type === "mousedown") {
-			this.prev_mouse = {clientX: event.clientX, clientY: event.clientY};
+			//this.prev_mouse = {clientX: event.clientX, clientY: event.clientY};
+			this.prev_mouse = this.pointerPositionDecoder(event);
 		} else if (event.type === "touchstart") {
 			let touches_current = Array.from(event.touches);
 			this.prev_touches = touches_current.map(this.extractTouches);
@@ -865,9 +866,10 @@ class GalaxySimulator {
 	{
 		event.preventDefault();
 		if (event.type === "mousemove") {
+			let pointer = this.pointerPositionDecoder(event);
 			let move = {x: 0, y: 0};
-			move.x = event.clientX - this.prev_mouse.clientX;
-			move.y = event.clientY - this.prev_mouse.clientY;
+			move.x = pointer.x - this.prev_mouse.x;
+			move.y = pointer.y - this.prev_mouse.y;
 			if ((event.buttons & 1) != 0) {
 				this.rotCamera(
 				    -2.0 * Math.PI * move.x / this.rotDegree,
@@ -875,11 +877,12 @@ class GalaxySimulator {
 			} else if ((event.buttons & 4) != 0) {
 				this.moveCamera(move.x, move.y, 0);
 			}
-			this.prev_mouse = {clientX: event.clientX, clientY: event.clientY};
+			this.prev_mouse = {x: pointer.x, y: pointer.y};
 		} else if (event.type === "touchmove") {
 			let touches_current = Array.from(event.touches);
 			let move = {x: 0, y: 0};
 			if (touches_current.length == 1) {
+				let pointer = this.pointerPositionDecoder(touches_current[0]);
 				let n = this.prev_touches.findIndex(function (element, index, touches) {
 					if (element.identifier == this[0].identifier) {
 						return true;
@@ -889,17 +892,17 @@ class GalaxySimulator {
 				    },
 				    touches_current);
 				if (n >= 0) {
-					move.x = touches_current[0].clientX - this.prev_touches[n].clientX;
-					move.y = touches_current[0].clientY - this.prev_touches[n].clientY;
+					move.x = pointer.x - this.prev_touches[n].x;
+					move.y = pointer.y - this.prev_touches[n].y;
 					this.rotCamera(
 					    -2.0 * Math.PI * move.x / this.rotDegree,
 					    2.0 * Math.PI * move.y / this.rotDegree);
 				}
 			} else if (touches_current.length == 2 && this.prev_touches.length == 2) {
-				let p0 = {x: this.prev_touches[0].clientX, y: this.prev_touches[0].clientY};
-				let p1 = {x: this.prev_touches[1].clientX, y: this.prev_touches[1].clientY};
-				let r0 = {x: touches_current[0].clientX, y: touches_current[0].clientY};
-				let r1 = {x: touches_current[1].clientX, y: touches_current[1].clientY};
+				let p0 = this.pointerPositionDecoder(this.prev_touches[0]);
+				let p1 = this.pointerPositionDecoder(this.prev_touches[1]);
+				let r0 = this.pointerPositionDecoder(touches_current[0]);
+				let r1 = this.pointerPositionDecoder(touches_current[1]);
 				move.x = ((r0.x + r1.x) - (p0.x + p1.x)) * 0.5;
 				move.y = ((r0.y + r1.y) - (p0.y + p1.y)) * 0.5;
 				let dp = Math.sqrt(Math.pow(p0.x - p1.x, 2) + Math.pow(p0.y - p1.y, 2));
@@ -910,9 +913,20 @@ class GalaxySimulator {
 		}
 	}
 
+	pointerPositionDecoder(pointer)
+	{
+		let rect = this.rootWindow.getBoundingClientRect();
+		let pos = {
+			x: pointer.clientX - rect.left,
+			y: pointer.clientY - rect.top
+		};
+		return pos;
+	}
+
 	extractTouches(a)
 	{
-		return {clientX: a.clientX, clientY: a.clientY, identifier: a.identifier};
+		let pos = pointerPositionDecoder(a);
+		return {x: pos.x, y: pos.y, identifier: a.identifier};
 	}
 
 	wheelMove(event)
@@ -926,14 +940,14 @@ class GalaxySimulator {
 		event.preventDefault();
 		this.chaseBHInvoked = true;
 		this.chasingBHDistanceCurrent = this.chaseBHDistance;
-		this.chaseBHClickedPos = {x: event.clientX, y: event.clientY};
+		this.chaseBHClickedPos = this.pointerPositionDecoder(event);
 	}
 
 	touchDblTap(event)
 	{
 		this.chaseBHInvoked = true;
 		this.chasingBHDistanceCurrent = this.chaseBHDistance;
-		this.chaseBHClickedPos = {x: event.touches[0].clientX, y: event.touches[0].clientY};
+		this.chaseBHClickedPos = this.pointerPositionDecoder(event.touches[0]);
 	}
 
 	keyDown(event)
